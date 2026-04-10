@@ -23,6 +23,7 @@
       - [Composants off-chain](#composants-off-chain)
     - [2.3 Intégrations Externes](#23-intégrations-externes)
     - [2.4 Diagramme de composants](#24-diagramme-de-composants)
+      - [Légende des flèches (vérifiée vs code)](#légende-des-flèches-vérifiée-vs-code)
   - [3. Architecture Technique](#3-architecture-technique)
     - [3.1 Stack Technique](#31-stack-technique)
     - [3.2 Topologie des Contrats](#32-topologie-des-contrats)
@@ -58,7 +59,7 @@
 
 ## 1. Vue d'ensemble
 
-La plateforme **OPAL** (Open Platform for African Livelihoods) est une solution blockchain de la DPA Foundation pour l'assurance paramétrique contre les inondations au Sénégal et en Afrique de l'Ouest. Elle automatise la chaîne complète : **détection satellite → consensus oracle → déclenchement paramétrique → vérification des bénéficiaires → paiement Mobile Money**.
+La plateforme **OPAL** est une solution blockchain de la DPA Foundation pour l'assurance paramétrique contre les inondations. Elle automatise la chaîne complète : **détection satellite → consensus oracle → déclenchement paramétrique → vérification des bénéficiaires → paiement Mobile Money**.
 
 ### Principes architecturaux
 
@@ -83,52 +84,77 @@ La plateforme **OPAL** (Open Platform for African Livelihoods) est une solution 
 │                        POLYGON PoS (Amoy / Mainnet)                     │
 │                                                                         │
 │  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │    Opal Governance (UUPS Proxy)                                  │   │
+│  │    ───────────────────────────                                   │   │
+│  │    Multi-sig | Proposals | Timelock | Selector Whitelist         │   │
+│  └──────┬─────────────────────────────────────────────┬─────────── ─┘   │
+│         │ executeProposal()                           │ config          │
+│         │ .call(proposal.data)                        │ (onlyOwnerOr-   │
+│         ▼                                             ▼  Governance)    │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
 │  │              FloodPredictionContract (UUPS Proxy)                │   │
 │  │              ─────────────────────────────────                   │   │
-│  │  • Orchestrateur central (hub)                                  │   │
-│  │  • Création / validation des flood triggers                     │   │
-│  │  • Traitement batch des paiements                               │   │
-│  │  • Gestion budgétaire (committed / spent)                       │   │
-│  │  • Cooldown adaptatif par région                                │   │
-│  │  Rôles: ADMIN | OPERATOR | UPGRADER | PAUSER                   │   │
-│  └──────┬──────────┬──────────┬──────────┬──────────┬──────────────┘   │
-│         │          │          │          │          │                    │
-│    ┌────▼────┐ ┌───▼────┐ ┌──▼───┐ ┌───▼────┐ ┌───▼──────────────┐   │
-│    │  Multi  │ │Jokal-  │ │ KYC  │ │Mobile  │ │    Opal          │   │
-│    │ Oracle  │ │anté    │ │ AML  │ │Money   │ │  Governance      │   │
-│    │         │ │Target. │ │Compl.│ │Provider│ │  (UUPS Proxy)    │   │
-│    ├─────────┤ ├────────┤ ├──────┤ ├────────┤ ├──────────────────┤   │
-│    │Consensus│ │Merkle  │ │Attest│ │Payment │ │Multi-sig         │   │
-│    │IQR      │ │Tree    │ │4-eyes│ │Bridge  │ │Proposals         │   │
-│    │Commit-  │ │Privacy │ │Fraud │ │Batch   │ │Timelock          │   │
-│    │Reveal   │ │RGPD    │ │Detect│ │Retry   │ │Selector          │   │
-│    │Reputation│ │Expiry │ │Screen│ │Timeout │ │Whitelist         │   │
-│    └────▲────┘ └────────┘ └──────┘ └───▲────┘ └──────────────────┘   │
-│         │                               │                              │
-│    ┌────┴─────────────┐                 │                              │
-│    │    WASDI Oracle   │                 │                              │
-│    │    Connector      │                 │                              │
-│    ├──────────────────┤                 │                              │
-│    │ Sentinel-1/2     │                 │                              │
-│    │ MODIS, Landsat   │                 │                              │
-│    │ VIIRS            │                 │                              │
-│    │ Anomaly Detect.  │                 │                              │
-│    │ Circular Buffer  │                 │                              │
-│    └──────────────────┘                 │                              │
-│                                          │                              │
-│    ┌────────────────────┐               │                              │
-│    │ FloodPredictionLib │               │                              │
-│    │ (bibliothèque)     │               │                              │
-│    ├────────────────────┤               │                              │
-│    │ generateEventId()  │               │                              │
-│    │ hashBeneficiary()  │               │                              │
-│    │ calculateCooldown()│               │                              │
-│    └────────────────────┘               │                              │
-│                                          │                              │
-└──────────────────────────────────────────┼──────────────────────────────┘
-                                           │
-                                    Off-Chain Relayers
+│  │  • Orchestrateur central (hub)                                   │   │
+│  │  • Création / validation des flood triggers                      │   │
+│  │  • Traitement batch des paiements                                │   │
+│  │  • Gestion budgétaire (committed / spent)                        │   │
+│  │  • Cooldown adaptatif par région                                 │   │
+│  │  Rôles: ADMIN | OPERATOR | UPGRADER | PAUSER                     │   │
+│  └──────┬──────────┬──────────┬──────────┬──────────────────────────┘   │
+│         │          │          │          │                              │
+│    ┌────▼────┐ ┌───▼────┐ ┌──▼───┐ ┌───▼────┐                         │
+│    │  Multi  │ │Jokal-  │ │ KYC  │ │Mobile  │                          │
+│    │ Oracle  │ │anté    │ │ AML  │ │Money   │                          │
+│    │         │ │Target. │ │Compl.│ │Provid. │                          │
+│    ├─────────┤ ├────────┤ ├──────┤ ├────────┤                          │
+│    │Consensus│ │Merkle  │ │Attest│ │Payment │                          │
+│    │IQR      │ │Tree    │ │4-eyes│ │Bridge  │                          │
+│    │Commit-  │ │Privacy │ │Fraud │ │Batch   │                          │
+│    │Reveal   │ │RGPD    │ │Detect│ │Retry   │                          │
+│    │Reputation│ │Expiry │ │Screen│ │Timeout │                          │
+│    └─────────┘ └────────┘ └──────┘ └───▲────┘                          │
+│                                        │                               │
+│    ┌──────────────────┐                │                               │
+│    │ WASDI Oracle     │   Aucun lien   │                               │
+│    │ Connector        │   on-chain     │                               │
+│    ├──────────────────┤   avec Multi-  │                               │
+│    │ Sentinel-1/2     │   Oracle       │                               │
+│    │ MODIS, Landsat   │                │                               │
+│    │ VIIRS            │                │                               │
+│    │ Anomaly Detect.  │                │                               │
+│    │ Circular Buffer  │                │                               │
+│    └──────────────────┘                │                               │
+│                                        │                               │
+│    ┌────────────────────┐              │                               │
+│    │ FloodPredictionLib │              │                               │
+│    │ (bibliothèque)     │              │                               │
+│    ├────────────────────┤              │                               │
+│    │ generateEventId()  │              │                               │
+│    │ hashBeneficiary()  │              │                               │
+│    │ calculateCooldown()│              │                               │
+│    └────────────────────┘              │                               │
+│                                        │                               │
+└────────────────────────────────────────┼───────────────────────────────┘
+                                         │
+                                   Off-Chain Relayers
+                              ┌──────────┼──────────┐
+                              │          │          │
+                     ┌────────▼──┐  ┌────▼─────┐  ┌▼──────────┐
+                     │ WASDI     │  │ Oracle   │  │ Mobile    │
+                     │ Relayer   │  │ Relayers │  │ Money     │
+                     │→submitSat-│  │→submitDa-│  │ Relayer   │
+                     │ elliteDa- │  │ ta()/    │  │→confirmPa-│
+                     │ ta()      │  │ commitDa-│  │ yment()   │
+                     │ sur WASDI │  │ ta()     │  │→failPaym- │
+                     │ Connector │  │ sur Multi│  │ ent()     │
+                     │           │  │ Oracle   │  │           │
+                     └───────────┘  └──────────┘  └───────────┘
 ```
+
+> **Note** : `OpalGovernance` appelle `FloodPredictionContract` (et potentiellement
+> `MultiOracle`) via `executeProposal()` — et non l'inverse. `WASDIOracleConnector`
+> et `MultiOracle` n'ont aucun lien on-chain : ils sont alimentés indépendamment
+> par des relayers off-chain distincts.
 
 #### Résumé des 7 contrats
 
@@ -145,27 +171,27 @@ La plateforme **OPAL** (Open Platform for African Livelihoods) est une solution 
 ### 2.2 Couche Off-Chain (Relayers & Backend)
 
 ```
-┌───────────────────────────────────────────────────────────────┐
+┌────────────────────────────────────────────────────────── ─────┐
 │                      OPAL BACKEND                              │
 │                                                                │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐│
-│  │  WASDI        │  │  Relayer     │  │  OPAL Web App        ││
-│  │  Relayer      │  │  Mobile Money│  │  (Dashboard)         ││
-│  ├──────────────┤  ├──────────────┤  ├──────────────────────┤│
-│  │ Polling WASDI │  │ Orange Money │  │ Visualisation        ││
-│  │ API satellite │  │ Wave API     │  │ régions/triggers     ││
-│  │ → submitSatel-│  │ Free Money   │  │ Suivi paiements      ││
-│  │   liteData()  │  │ E-Money      │  │ Administration       ││
-│  │               │  │ confirmPay() │  │ Event listening      ││
-│  │               │  │ failPayment()│  │                      ││
-│  └──────┬───────┘  └──────┬───────┘  └──────────┬───────────┘│
+│  ┌──────────── ──┐  ┌───────────── ─┐  ┌──────────────────────┐│
+│  │  WASDI        │  │  Relayer      │  │  OPAL Web App        ││
+│  │  Relayer      │  │  Mobile Money │  │  (Dashboard)         ││
+│  ├─────────── ───┤  ├───────────── ─┤  ├──────────────────────┤│
+│  │ Polling WASDI │  │ Orange Money  │  │ Visualisation        ││
+│  │ API satellite │  │ Wave API      │  │ régions/triggers     ││
+│  │ → submitSatel-│  │ Free Money    │  │ Suivi paiements      ││
+│  │   liteData()  │  │ E-Money       │  │ Administration       ││
+│  │               │  │ confirmPay()  │  │ Event listening      ││
+│  │               │  │ failPayment() │  │                      ││
+│  └──────┬──── ───┘  └──────┬────── ─┘  └──────────┬───────────┘│
 │         │                  │                      │            │
 └─────────┼──────────────────┼──────────────────────┼────────────┘
           │                  │                      │
           │      Polygon RPC (JSON-RPC / WebSocket) │
           │                  │                      │
 ┌─────────▼──────────────────▼──────────────────────▼────────────┐
-│                   SMART CONTRACTS (ON-CHAIN)                    │
+│                   SMART CONTRACTS (ON-CHAIN)                   │
 └────────────────────────────────────────────────────────────────┘
 ```
 
@@ -217,31 +243,63 @@ La plateforme **OPAL** (Open Platform for African Livelihoods) est une solution 
               │  └───┬────┘ └───┬────┘ └────┬─────┘ │
               └──────┼──────────┼───────────┼───────┘
                      │          │           │
-    ┌────────────────┼──────────┼───────────┼────────────────┐
-    │                │   Polygon RPC        │                │
-    │   ┌────────────▼──────────▼───────────▼────────────┐   │
-    │   │        FloodPredictionContract (HUB)           │   │
-    │   └──┬──────┬──────┬──────┬──────┬─────────────────┘   │
-    │      │      │      │      │      │                     │
-    │  ┌───▼──┐┌──▼──┐┌──▼──┐┌──▼──┐┌──▼──────────┐         │
-    │  │Multi ││Joka-││KYC  ││MMP  ││Opal         │         │
-    │  │Oracle││lanté││AML  ││     ││Governance   │         │
-    │  └──▲───┘└─────┘└─────┘└──▲──┘└─────────────┘         │
-    │     │                     │                            │
-    │  ┌──┴──────────┐          │                            │
-    │  │WASDI Oracle │          │                            │
-    │  │Connector    │          │                            │
-    │  └──▲──────────┘          │                            │
-    │     │                     │     BLOCKCHAIN (On-Chain)  │
-    └─────┼─────────────────────┼────────────────────────────┘
-          │                     │
-   ┌──────┴──────┐    ┌────────┴────────┐
-   │ WASDI       │    │ Mobile Money    │
-   │ Satellite   │    │ APIs            │
-   │ Platform    │    │ (Orange, Wave,  │
-   │             │    │  Free, E-Money) │
-   └─────────────┘    └─────────────────┘
+    ┌────────────────┼──────────┼───────────┼────────────────────┐
+    │                │   Polygon RPC        │                    │
+    │   ┌────────────▼──────────▼───────────▼────────────┐       │
+    │   │        FloodPredictionContract (HUB)           │       │
+    │   └──┬──────┬──────┬──────┬────────────────────────┘       │
+    │      │      │      │      │          ▲                     │
+    │  ┌───▼──┐┌──▼──┐┌──▼──┐┌──▼──┐  ┌────┴──────────┐         │
+    │  │Multi ││Joka-││KYC  ││MMP  │  │Opal           │         │
+    │  │Oracle││lanté││AML  ││     │  │Governance     │         │
+    │  └──────┘└─────┘└─────┘└─────┘  │(appelle FPC   │         │
+    │     ▲                            │ et MO via     │         │
+    │     │                            │ executePropo- │         │
+    │     │                            │ sal)          │         │
+    │     │                            └───┬───────────┘         │
+    │     │                                │ config               │
+    │     │                                ▼                     │
+    │     │                           ┌──────────────┐           │
+    │     │                           │Multi Oracle  │           │
+    │     │                           │(même contrat)│           │
+    │     │                           └──────────────┘           │
+    │     │                                                      │
+    │  ┌──┴──────────┐                                           │
+    │  │WASDI Oracle │   ◄── Aucun lien on-chain avec            │
+    │  │Connector    │       MultiOracle. Alimentés               │
+    │  └──▲──────────┘       indépendamment par les relayers.    │
+    │     │                                                      │
+    │     │  Off-chain Relayers ─ ─ ─ ─► MultiOracle             │
+    │     │  (submitSatelliteData)       (submitData/commitData)  │
+    │     │                                                      │
+    │     │                     ┌─ ─ ─ ─ ─ ─ ─ ─ ─ ─┐           │
+    │     │                     │ MMP émet des events │           │
+    │     │                     │ écoutés off-chain   │           │
+    │     │                     └─ ─ ─ ─ ─ ┬ ─ ─ ─ ─┘           │
+    │     │                                │ BLOCKCHAIN           │
+    └─────┼────────────────────────────────┼─────────────────────┘
+          │                                │ (off-chain)
+   ┌──────┴──────┐               ┌────────▼────────┐
+   │ WASDI       │               │ Mobile Money    │
+   │ Satellite   │               │ APIs            │
+   │ Platform    │               │ (Orange, Wave,  │
+   │             │               │  Free, E-Money) │
+   └─────────────┘               └─────────────────┘
 ```
+
+#### Légende des flèches (vérifiée vs code)
+
+| Flèche | Type | Preuve dans le code |
+|--------|------|---------------------|
+| `FPC → MultiOracle` | Appel on-chain | `IMultiOracle(multiOracle).isConsensusReached()`, `.getConsensusRiskScore()` |
+| `FPC → JokalanteTargeting` | Appel on-chain | `IJokalanteTargeting(...).verifyBeneficiary()`, `.markVerified()` |
+| `FPC → KYCAMLCompliance` | Appel on-chain | `IKYCAMLCompliance(...).batchCheckCompliance()` |
+| `FPC → MobileMoneyProvider` | Appel on-chain | `IMobileMoneyProvider(...).batchInitiatePayments()` |
+| `GOV → FPC` | Appel on-chain | `executionTarget.call{gas}(proposal.data)` dans `executeProposal()` |
+| `GOV → MultiOracle` | Appel on-chain (config) | `onlyOwnerOrGovernance` sur `setConsensusThreshold()`, etc. |
+| `Relayer → WASDI` | Off-chain → on-chain | `submitSatelliteData()` (pas de lien WASDI→MO) |
+| `Relayer → MultiOracle` | Off-chain → on-chain | `submitData()` / `commitData()` / `revealData()` |
+| `MMP → Mobile Money APIs` | Off-chain (events) | `emit PaymentInitiated(...)` écouté par relayers |
 
 ---
 
@@ -267,38 +325,38 @@ La plateforme **OPAL** (Open Platform for African Livelihoods) est une solution 
 ┌──────────────────────────────────────────────────────────────────┐
 │                        UUPS PROXY LAYER                          │
 │                                                                  │
-│  ┌────────────────────────┐  ┌────────────────────────────────┐  │
-│  │  ERC1967 Proxy         │  │  ERC1967 Proxy                │  │
-│  │  ↓                     │  │  ↓                            │  │
-│  │  FloodPredictionContract│  │  OpalGovernanceUpgradeable    │  │
-│  │  (Implementation V3)   │  │  (Implementation)             │  │
-│  │  Storage Gaps: 48      │  │  Storage Gaps: 47             │  │
-│  └────────────────────────┘  └────────────────────────────────┘  │
+│  ┌───────── ───────────────┐ ┌────────────────────────────────┐  │
+│  │  ERC1967 Prox y         │ │  ERC1967 Proxy                 │  │
+│  │  ↓                      │ │  ↓                             │  │
+│  │  FloodPredictionContract│ │  OpalGovernanceUpgradeable     │  │
+│  │  (Implementation V3)    │ │  (Implementation)              │  │
+│  │  Storage Gaps: 48       │ │  Storage Gaps: 47              │  │
+│  └───────────────── ───────┘ └────────────────────────────────┘  │
 │                                                                  │
 ├──────────────────────────────────────────────────────────────────┤
 │                      STANDARD CONTRACTS                          │
 │                                                                  │
-│  ┌──────────────┐ ┌────────────────┐ ┌───────────────────────┐  │
-│  │ MultiOracle  │ │ JokalanteTarget│ │ KYCAMLCompliance      │  │
-│  │ Ownable2Step │ │ Ownable2Step   │ │ Ownable2Step          │  │
-│  │ Pausable     │ │                │ │                       │  │
-│  │ ReentrancyG. │ │                │ │                       │  │
-│  └──────────────┘ └────────────────┘ └───────────────────────┘  │
+│  ┌──────────────┐ ┌────────────────┐ ┌───────────────────────┐   │
+│  │ MultiOracle  │ │ JokalanteTarget│ │ KYCAMLCompliance      │   │
+│  │ Ownable2Step │ │ Ownable2Step   │ │ Ownable2Step          │   │
+│  │ Pausable     │ │                │ │                       │   │
+│  │ ReentrancyG. │ │                │ │                       │   │
+│  └──────────────┘ └────────────────┘ └───────────────────────┘   │
 │                                                                  │
-│  ┌──────────────────────┐ ┌──────────────────────────────────┐  │
-│  │ MobileMoneyProvider  │ │ WASDIOracleConnector             │  │
-│  │ Ownable2Step         │ │ Ownable2Step                     │  │
-│  │ Pausable             │ │ Pausable                         │  │
-│  │ ReentrancyGuard      │ │ ReentrancyGuard                  │  │
-│  └──────────────────────┘ └──────────────────────────────────┘  │
+│  ┌──────────────────────┐ ┌──────────────────────────────────┐   │
+│  │ MobileMoneyProvider  │ │ WASDIOracleConnector             │   │
+│  │ Ownable2Step         │ │ Ownable2Step                     │   │
+│  │ Pausable             │ │ Pausable                         │   │
+│  │ ReentrancyGuard      │ │ ReentrancyGuard                  │   │
+│  └──────────────────────┘ └──────────────────────────────────┘   │
 │                                                                  │
 ├──────────────────────────────────────────────────────────────────┤
 │                        LIBRARIES                                 │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │ FloodPredictionLib                                        │   │
-│  │  generateEventId() | hashBeneficiary() | calculateCooldown│   │
-│  │  uint2str() | isValidRiskScore()                          │   │
-│  └──────────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │ FloodPredictionLib                                       │    │
+│  │  generateEventId() | hashBeneficiary() |calculateCooldown│    │
+│  │  uint2str() | isValidRiskScore()                         │    │
+│  └──────────────────────────────────────────────────────────┘    │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -502,29 +560,29 @@ WASDI Satellite API          WASDI Relayer              WASDIOracleConnector
 #### Mode direct
 
 ```
-Oracle 1..N                          MultiOracle
-    │                                     │
+Oracle 1..N                           MultiOracle
+    │                                      │
     │  submitData(region, riskScore,       │
     │             dataSource)              │
-    ├────────────────────────────────────►│
-    │                                     │ Validation:
-    │                                     │ ✓ oracle actif
-    │                                     │ ✓ pas de doublon dans fenêtre
-    │                                     │ ✓ données fraîches (< 1h)
-    │                                     │
-    │                                     │ Réputation: +2 (normal) / -10 (outlier)
-    │                                     │ if 3 outliers consécutifs → probation
-    │                                     │ if 4 outliers consécutifs → désactivation
-    │                                     │
-    │                                     │ Si ≥60% oracles ont soumis:
-    │                                     │   1. Calcul IQR [Q1, Q3]
-    │                                     │   2. Filtrer outliers hors [Q1-1.5·IQR, Q3+1.5·IQR]
-    │                                     │   3. Médiane des scores restants
-    │                                     │
-    │  emit ConsensusReached(             │
-    │    region, riskScore, timestamp)    │
-    │◄────────────────────────────────────┤
-    │                                     │
+    ├────────────────────────────────────► │
+    │                                      │ Validation:
+    │                                      │ ✓ oracle actif
+    │                                      │ ✓ pas de doublon dans fenêtre
+    │                                      │ ✓ données fraîches (< 1h)
+    │                                      │
+    │                                      │ Réputation: +2 (normal) / -10 (outlier)
+    │                                      │ if 3 outliers consécutifs → probation
+    │                                      │ if 4 outliers consécutifs → désactivation
+    │                                      │
+    │                                      │ Si ≥60% oracles ont soumis:
+    │                                      │   1. Calcul IQR [Q1, Q3]
+    │                                      │   2. Filtrer outliers hors [Q1-1.5·IQR, Q3+1.5·IQR]
+    │                                      │   3. Médiane des scores restants
+    │                                      │
+    │  emit ConsensusReached(              │
+    │    region, riskScore, timestamp)     │
+    │◄──────────────────────────────────── ┤
+    │                                      │
 ```
 
 #### Mode commit-reveal (anti-front-running)
@@ -532,13 +590,13 @@ Oracle 1..N                          MultiOracle
 ```
 Oracle                               MultiOracle
   │                                       │
-  │  Phase 1 — COMMIT (2 min)            │
+  │  Phase 1 — COMMIT (2 min)             │
   │  commitData(region,                   │
   │    keccak256(risk,source,salt))       │
   ├──────────────────────────────────────►│
   │                                       │ Stockage commitHash + timestamp
   │                                       │
-  │  Phase 2 — REVEAL (10 min window)    │
+  │  Phase 2 — REVEAL (10 min window)     │
   │  revealData(region, riskScore,        │
   │             dataSource, salt)         │
   ├──────────────────────────────────────►│
@@ -584,7 +642,8 @@ Opérateur                FloodPredictionContract            MultiOracle
     │                              │                             │
     │                              │ Vérification TOCTOU:        │
     │                              │ |riskScore - consensus| ≤   │
-    │                              │    oracleTolerance (±10)    │
+    │                              │  oracleTolerance (défaut 0, │
+    │                              │  max 10)                    │
     │                              │                             │
     │                              │ committedBudget += total    │
     │                              │ Stockage trigger            │
@@ -625,7 +684,7 @@ Opérateur         FPC                Jokalanté       KYC/AML       MobileMoney
     │               │◄──────────────────────────────────┤                  │
     │               │ compliant[] (bool array)          │                  │
     │               │                    │              │                  │
-    │               │ Pour chaque bénéficiaire (i = 0..49):              │
+    │               │ Pour chaque bénéficiaire (i = 0..49):                │
     │               │                    │              │                  │
     │               │ Si non-compliant → skip           │                  │
     │               │   emit KYCBeneficiarySkipped      │                  │
@@ -636,6 +695,14 @@ Opérateur         FPC                Jokalanté       KYC/AML       MobileMoney
     │               ├───────────────────►│              │                  │
     │               │◄───────────────────┤              │                  │
     │               │ true/false         │              │                  │
+    │               │                    │              │                  │
+    │               │ markVerified()     │              │                  │
+    │               ├───────────────────►│              │                  │
+    │               │                    │              │                  │
+    │               │ [Fin boucle per-bénéficiaire]     │                  │
+    │               │                    │              │                  │
+    │               │ spentAmount +=     │              │                  │
+    │               │ committedBudget -= │              │                  │
     │               │                    │              │                  │
     │               │ batchInitiatePayments(            │                  │
     │               │   hashes[], amounts[],            │                  │
@@ -650,12 +717,6 @@ Opérateur         FPC                Jokalanté       KYC/AML       MobileMoney
     │               │                    │              │                  │
     │               │◄─────────────────────────────────────────────────────┤
     │               │ paymentIds[]       │              │                  │
-    │               │                    │              │                  │
-    │               │ markVerified()     │              │                  │
-    │               ├───────────────────►│              │                  │
-    │               │                    │              │                  │
-    │               │ spentAmount +=     │              │                  │
-    │               │ committedBudget -= │              │                  │
     │               │                    │              │                  │
     │ emit Batch-   │                    │              │                  │
     │ PaymentProc.  │                    │              │                  │
@@ -749,7 +810,7 @@ Officier A             KYCAMLCompliance              Officier B
     │                         ├──────────────────────────►│
     │                         │                           │
     │                         │                           │
-    │    --- Détection fraude (ultérieur) ---              │
+    │    --- Détection fraude (ultérieur) ---             │
     │                         │                           │
     │                         │  raiseFraudAlert(         │
     │                         │    beneficiaryHash,       │
@@ -793,7 +854,7 @@ Gouverneur 1      OpalGovernance           Gouverneur 2/3    FloodPredictionCont
     │                   │ signatures++           │                    │
     │                   │                        │                    │
     │                   │  signProposal(id)      │                    │
-    │                   │◄───────────────────────┤ (Gov 3)           │
+    │                   │◄───────────────────────┤ (Gov 3)            │
     │                   │ signatures++           │                    │
     │                   │ ✓ quorum atteint       │                    │
     │                   │                        │                    │
@@ -980,8 +1041,8 @@ KYCAMLCompliance │  -       -       -       self    -       -       -
                  │
 MobileMoneyProv. │  -       -       -       -       self    -       -
                  │
-OpalGovernance   │  -       -       -       -       -       self    WRITE
-                 │                                                (call)
+OpalGovernance   │  WRITE   -       -       -       -       self    WRITE
+                 │ (config)                                       (call)
 ```
 
 **Légende :**
@@ -1000,6 +1061,7 @@ OpalGovernance   │  -       -       -       -       -       self    WRITE
 | FPC | MobileMoneyProvider | `batchInitiatePayments()` | WRITE |
 | OpalGovernance | FPC | `createGovernanceOverrideTrigger()` (via low-level call) | WRITE |
 | OpalGovernance | FPC | `allocateBudget()`, autres (via selector whitelist) | WRITE |
+| OpalGovernance | MultiOracle | `setConsensusThreshold()`, `setDataFreshnessThreshold()`, `setMaxConsecutiveOutliers()` (via `onlyOwnerOrGovernance`) | WRITE |
 
 ---
 
@@ -1012,7 +1074,7 @@ OpalGovernance   │  -       -       -       -       -       self    WRITE
 | `GOVERNANCE_RISK_THRESHOLD` | 85% (déclaré, non utilisé dans la logique) | FPC |
 | `MIN_PAYMENT` | 500 CFA | FPC, MMP |
 | `MAX_PAYMENT` | 5 000 000 CFA | FPC, MMP |
-| `ORACLE_TOLERANCE` | ±10 points | FPC |
+| `ORACLE_TOLERANCE` | 0 par défaut (max 10 pts) | FPC |
 | `MAX_ORACLES` | 10 | MultiOracle |
 | `MIN_ORACLE_COUNT` | 4 | MultiOracle |
 | `CONSENSUS_THRESHOLD` | 60% | MultiOracle |
@@ -1031,7 +1093,7 @@ OpalGovernance   │  -       -       -       -       -       self    WRITE
 | `MAX_TIMEOUT` | 24h | MobileMoneyProvider |
 | `MAX_HISTORY_ENTRIES` | 100 par région | WASDIOracleConnector |
 | `FRESHNESS_THRESHOLD` | 6 heures | WASDIOracleConnector |
-| `ANOMALY_DELTA` | 40 points | WASDIOracleConnector |
+| `ANOMALY_THRESHOLD` | 40 points | WASDIOracleConnector |
 | `ALERT_THRESHOLD` | 70 | WASDIOracleConnector |
 | `MAX_ACTORS` | 20 | OpalGovernance |
 | `DEFAULT_DEADLINE` | 24h | OpalGovernance |
