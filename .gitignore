@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+artifacts/
+cache/
+typechain-types/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Deployment manifests (contain addresses, not secrets, but keep local)
+deployment-*.json
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+coverage.json
+
+# Debug
+debug-*.mjs

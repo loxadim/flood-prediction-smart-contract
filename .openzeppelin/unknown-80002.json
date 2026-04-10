@@ -1,0 +1,1020 @@
+{
+  "manifestVersion": "3.2",
+  "proxies": [
+    {
+      "address": "0xC07bC08B3e35B4bd8D238aEf644BD9697b8b4B7a",
+      "txHash": "0x5a5030a763b9ee00a19d8ac5ddbbc0c6111d3b011cd730c1428318f218401fce",
+      "kind": "uups"
+    },
+    {
+      "address": "0x5c9733cBdACa3B88E7F7EE35d31a5C34F972201f",
+      "txHash": "0x8be51c984487ca09b7f37631018d572536445ba6e5415afb12e547262f8cf6de",
+      "kind": "uups"
+    }
+  ],
+  "impls": {
+    "0306e039893201d58998cc99943cdcb7b031127ad62e3073838a729c0ac56ff9": {
+      "address": "0x4379Deb01104fB3F4442e69a0F6CcE44C0BC7E53",
+      "txHash": "0x58c015beb2abe84c2ebcdabba2eae66d20e3a8e7ac9f8889021ac0cb0f57b790",
+      "layout": {
+        "solcVersion": "0.8.28",
+        "storage": [
+          {
+            "label": "actors",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_mapping(t_address,t_struct(GovernanceActor)14314_storage)",
+            "contract": "OpalGovernanceUpgradeable",
+            "src": "project/contracts/OpalGovernanceUpgradeable.sol:44"
+          },
+          {
+            "label": "actorList",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "OpalGovernanceUpgradeable",
+            "src": "project/contracts/OpalGovernanceUpgradeable.sol:45"
+          },
+          {
+            "label": "activeActorCount",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_uint256",
+            "contract": "OpalGovernanceUpgradeable",
+            "src": "project/contracts/OpalGovernanceUpgradeable.sol:46"
+          },
+          {
+            "label": "proposals",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_mapping(t_uint256,t_struct(Proposal)14299_storage)",
+            "contract": "OpalGovernanceUpgradeable",
+            "src": "project/contracts/OpalGovernanceUpgradeable.sol:49"
+          },
+          {
+            "label": "proposalCount",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_uint256",
+            "contract": "OpalGovernanceUpgradeable",
+            "src": "project/contracts/OpalGovernanceUpgradeable.sol:50"
+          },
+          {
+            "label": "executedProposalCount",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_uint256",
+            "contract": "OpalGovernanceUpgradeable",
+            "src": "project/contracts/OpalGovernanceUpgradeable.sol:51"
+          },
+          {
+            "label": "proposalSignatures",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_mapping(t_uint256,t_mapping(t_address,t_bool))",
+            "contract": "OpalGovernanceUpgradeable",
+            "src": "project/contracts/OpalGovernanceUpgradeable.sol:54"
+          },
+          {
+            "label": "quorum",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_uint256",
+            "contract": "OpalGovernanceUpgradeable",
+            "src": "project/contracts/OpalGovernanceUpgradeable.sol:57"
+          },
+          {
+            "label": "floodPredictionContract",
+            "offset": 0,
+            "slot": "8",
+            "type": "t_address",
+            "contract": "OpalGovernanceUpgradeable",
+            "src": "project/contracts/OpalGovernanceUpgradeable.sol:60"
+          },
+          {
+            "label": "allowedSelectors",
+            "offset": 0,
+            "slot": "9",
+            "type": "t_mapping(t_bytes4,t_bool)",
+            "contract": "OpalGovernanceUpgradeable",
+            "src": "project/contracts/OpalGovernanceUpgradeable.sol:63"
+          },
+          {
+            "label": "executionGasLimit",
+            "offset": 0,
+            "slot": "10",
+            "type": "t_uint256",
+            "contract": "OpalGovernanceUpgradeable",
+            "src": "project/contracts/OpalGovernanceUpgradeable.sol:66"
+          },
+          {
+            "label": "quorumReachedAt",
+            "offset": 0,
+            "slot": "11",
+            "type": "t_mapping(t_uint256,t_uint256)",
+            "contract": "OpalGovernanceUpgradeable",
+            "src": "project/contracts/OpalGovernanceUpgradeable.sol:69"
+          },
+          {
+            "label": "proposalRejectionCount",
+            "offset": 0,
+            "slot": "12",
+            "type": "t_mapping(t_uint256,t_uint256)",
+            "contract": "OpalGovernanceUpgradeable",
+            "src": "project/contracts/OpalGovernanceUpgradeable.sol:73"
+          },
+          {
+            "label": "proposalRejections",
+            "offset": 0,
+            "slot": "13",
+            "type": "t_mapping(t_uint256,t_mapping(t_address,t_bool))",
+            "contract": "OpalGovernanceUpgradeable",
+            "src": "project/contracts/OpalGovernanceUpgradeable.sol:74"
+          },
+          {
+            "label": "approvedUpgrades",
+            "offset": 0,
+            "slot": "14",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "OpalGovernanceUpgradeable",
+            "src": "project/contracts/OpalGovernanceUpgradeable.sol:77"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "15",
+            "type": "t_array(t_uint256)47_storage",
+            "contract": "OpalGovernanceUpgradeable",
+            "src": "project/contracts/OpalGovernanceUpgradeable.sol:515"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)624_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(Ownable2StepStorage)151_storage": {
+            "label": "struct Ownable2StepUpgradeable.Ownable2StepStorage",
+            "members": [
+              {
+                "label": "_pendingOwner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)206_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)47_storage": {
+            "label": "uint256[47]",
+            "numberOfBytes": "1504"
+          },
+          "t_bytes4": {
+            "label": "bytes4",
+            "numberOfBytes": "4"
+          },
+          "t_bytes_storage": {
+            "label": "bytes",
+            "numberOfBytes": "32"
+          },
+          "t_enum(ProposalStatus)14263": {
+            "label": "enum IOpalGovernance.ProposalStatus",
+            "members": [
+              "PENDING",
+              "APPROVED",
+              "EXECUTED",
+              "REJECTED",
+              "EXPIRED"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_enum(ProposalType)14269": {
+            "label": "enum IOpalGovernance.ProposalType",
+            "members": [
+              "EMERGENCY_TRIGGER",
+              "PARAMETER_CHANGE",
+              "BUDGET_ALLOCATION",
+              "UPGRADE",
+              "ORACLE_OVERRIDE"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(GovernanceActor)14314_storage)": {
+            "label": "mapping(address => struct IOpalGovernance.GovernanceActor)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes4,t_bool)": {
+            "label": "mapping(bytes4 => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_mapping(t_address,t_bool))": {
+            "label": "mapping(uint256 => mapping(address => bool))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(Proposal)14299_storage)": {
+            "label": "mapping(uint256 => struct IOpalGovernance.Proposal)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_uint256)": {
+            "label": "mapping(uint256 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(GovernanceActor)14314_storage": {
+            "label": "struct IOpalGovernance.GovernanceActor",
+            "members": [
+              {
+                "label": "actorAddress",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "name",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "role",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "isActive",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "proposalCount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "signatureCount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "registeredAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "6"
+              }
+            ],
+            "numberOfBytes": "224"
+          },
+          "t_struct(Proposal)14299_storage": {
+            "label": "struct IOpalGovernance.Proposal",
+            "members": [
+              {
+                "label": "id",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "proposalType",
+                "type": "t_enum(ProposalType)14269",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "status",
+                "type": "t_enum(ProposalStatus)14263",
+                "offset": 1,
+                "slot": "1"
+              },
+              {
+                "label": "proposer",
+                "type": "t_address",
+                "offset": 2,
+                "slot": "1"
+              },
+              {
+                "label": "target",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "description",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "data",
+                "type": "t_bytes_storage",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "signatureCount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "requiredSignatures",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "createdAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "7"
+              },
+              {
+                "label": "deadline",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "8"
+              },
+              {
+                "label": "executedAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "9"
+              },
+              {
+                "label": "region",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "10"
+              }
+            ],
+            "numberOfBytes": "352"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Ownable2Step": [
+            {
+              "contract": "Ownable2StepUpgradeable",
+              "label": "_pendingOwner",
+              "type": "t_address",
+              "src": "npm/@openzeppelin/contracts-upgradeable@5.6.1/access/Ownable2StepUpgradeable.sol:29",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "npm/@openzeppelin/contracts-upgradeable@5.6.1/access/OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "npm/@openzeppelin/contracts@5.6.1/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "npm/@openzeppelin/contracts@5.6.1/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "636675a8dd8851ebc86afb7a251866fd86572761e6dca9fd7313d0340349108a": {
+      "address": "0xEcDD523F826fbbF6DfAAe4A0D485f91ed28D9509",
+      "txHash": "0x96f61ba3c731aebdd3000aeaf64744dcf43ed6972bfd1a3bb561135270437fd3",
+      "layout": {
+        "solcVersion": "0.8.28",
+        "storage": [
+          {
+            "label": "triggers",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_mapping(t_string_memory_ptr,t_struct(FloodTrigger)13374_storage)",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:91"
+          },
+          {
+            "label": "triggerIds",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_string_storage)dyn_storage",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:92"
+          },
+          {
+            "label": "triggerCount",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_uint256",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:93"
+          },
+          {
+            "label": "budgets",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_mapping(t_string_memory_ptr,t_struct(BudgetAllocation)13385_storage)",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:96"
+          },
+          {
+            "label": "budgetRegions",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_array(t_string_storage)dyn_storage",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:97"
+          },
+          {
+            "label": "totalBudgetAllocated",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_uint256",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:98"
+          },
+          {
+            "label": "totalBudgetSpent",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_uint256",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:99"
+          },
+          {
+            "label": "paymentRecords",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_mapping(t_bytes32,t_struct(PaymentRecord)4491_storage)",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:102"
+          },
+          {
+            "label": "totalPaymentsProcessed",
+            "offset": 0,
+            "slot": "8",
+            "type": "t_uint256",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:103"
+          },
+          {
+            "label": "totalAmountDisbursed",
+            "offset": 0,
+            "slot": "9",
+            "type": "t_uint256",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:104"
+          },
+          {
+            "label": "triggerPaidCount",
+            "offset": 0,
+            "slot": "10",
+            "type": "t_mapping(t_string_memory_ptr,t_uint256)",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:107"
+          },
+          {
+            "label": "committedBudget",
+            "offset": 0,
+            "slot": "11",
+            "type": "t_mapping(t_string_memory_ptr,t_uint256)",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:110"
+          },
+          {
+            "label": "triggerSpentAmount",
+            "offset": 0,
+            "slot": "12",
+            "type": "t_mapping(t_string_memory_ptr,t_uint256)",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:113"
+          },
+          {
+            "label": "regionNonces",
+            "offset": 0,
+            "slot": "13",
+            "type": "t_mapping(t_string_memory_ptr,t_uint256)",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:116"
+          },
+          {
+            "label": "globalNonce",
+            "offset": 0,
+            "slot": "14",
+            "type": "t_uint256",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:117"
+          },
+          {
+            "label": "lastTriggerTimestamp",
+            "offset": 0,
+            "slot": "15",
+            "type": "t_mapping(t_string_memory_ptr,t_uint256)",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:120"
+          },
+          {
+            "label": "riskThreshold",
+            "offset": 0,
+            "slot": "16",
+            "type": "t_uint256",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:123"
+          },
+          {
+            "label": "multiOracle",
+            "offset": 0,
+            "slot": "17",
+            "type": "t_address",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:126"
+          },
+          {
+            "label": "governance",
+            "offset": 0,
+            "slot": "18",
+            "type": "t_address",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:127"
+          },
+          {
+            "label": "jokalanteTargeting",
+            "offset": 0,
+            "slot": "19",
+            "type": "t_address",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:128"
+          },
+          {
+            "label": "mobileMoneyProvider",
+            "offset": 0,
+            "slot": "20",
+            "type": "t_address",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:129"
+          },
+          {
+            "label": "kycCompliance",
+            "offset": 0,
+            "slot": "21",
+            "type": "t_address",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:130"
+          },
+          {
+            "label": "emergencyMode",
+            "offset": 20,
+            "slot": "21",
+            "type": "t_bool",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:133"
+          },
+          {
+            "label": "regionEmergency",
+            "offset": 0,
+            "slot": "22",
+            "type": "t_mapping(t_string_memory_ptr,t_bool)",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:134"
+          },
+          {
+            "label": "oracleTolerance",
+            "offset": 0,
+            "slot": "23",
+            "type": "t_uint256",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:139"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "24",
+            "type": "t_array(t_uint256)48_storage",
+            "contract": "FloodPredictionContract",
+            "src": "project/contracts/FloodPredictionContract.sol:993"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)24_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(AccessControlStorage)34_storage": {
+            "label": "struct AccessControlUpgradeable.AccessControlStorage",
+            "members": [
+              {
+                "label": "_roles",
+                "type": "t_mapping(t_bytes32,t_struct(RoleData)24_storage)",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(InitializableStorage)624_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(PausableStorage)308_storage": {
+            "label": "struct PausableUpgradeable.PausableStorage",
+            "members": [
+              {
+                "label": "_paused",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(RoleData)24_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "hasRole",
+                "type": "t_mapping(t_address,t_bool)",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_array(t_string_storage)dyn_storage": {
+            "label": "string[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)48_storage": {
+            "label": "uint256[48]",
+            "numberOfBytes": "1536"
+          },
+          "t_enum(RiskLevel)13343": {
+            "label": "enum IFloodPrediction.RiskLevel",
+            "members": [
+              "LOW",
+              "MODERATE",
+              "HIGH",
+              "CRITICAL"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_enum(TriggerStatus)13338": {
+            "label": "enum IFloodPrediction.TriggerStatus",
+            "members": [
+              "INACTIVE",
+              "PENDING",
+              "ACTIVE",
+              "VALIDATED",
+              "PAID",
+              "EXPIRED",
+              "CANCELLED"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_bytes32,t_struct(PaymentRecord)4491_storage)": {
+            "label": "mapping(bytes32 => struct FloodPredictionContract.PaymentRecord)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_string_memory_ptr,t_bool)": {
+            "label": "mapping(string => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_string_memory_ptr,t_struct(BudgetAllocation)13385_storage)": {
+            "label": "mapping(string => struct IFloodPrediction.BudgetAllocation)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_string_memory_ptr,t_struct(FloodTrigger)13374_storage)": {
+            "label": "mapping(string => struct IFloodPrediction.FloodTrigger)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_string_memory_ptr,t_uint256)": {
+            "label": "mapping(string => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_string_memory_ptr": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(BudgetAllocation)13385_storage": {
+            "label": "struct IFloodPrediction.BudgetAllocation",
+            "members": [
+              {
+                "label": "region",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "allocatedAmount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "spentAmount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "lastUpdated",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "isActive",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "4"
+              }
+            ],
+            "numberOfBytes": "160"
+          },
+          "t_struct(FloodTrigger)13374_storage": {
+            "label": "struct IFloodPrediction.FloodTrigger",
+            "members": [
+              {
+                "label": "eventId",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "region",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "riskScore",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "timestamp",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "validatedAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "paidAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "status",
+                "type": "t_enum(TriggerStatus)13338",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "riskLevel",
+                "type": "t_enum(RiskLevel)13343",
+                "offset": 1,
+                "slot": "6"
+              },
+              {
+                "label": "triggeredBy",
+                "type": "t_address",
+                "offset": 2,
+                "slot": "6"
+              },
+              {
+                "label": "totalAmount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "7"
+              },
+              {
+                "label": "beneficiaryCount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "8"
+              },
+              {
+                "label": "merkleRoot",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "9"
+              },
+              {
+                "label": "isGovernanceOverride",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "10"
+              },
+              {
+                "label": "chainId",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "11"
+              }
+            ],
+            "numberOfBytes": "384"
+          },
+          "t_struct(PaymentRecord)4491_storage": {
+            "label": "struct FloodPredictionContract.PaymentRecord",
+            "members": [
+              {
+                "label": "beneficiaryHash",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "paidAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "eventId",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "verified",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "4"
+              }
+            ],
+            "numberOfBytes": "160"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Pausable": [
+            {
+              "contract": "PausableUpgradeable",
+              "label": "_paused",
+              "type": "t_bool",
+              "src": "npm/@openzeppelin/contracts-upgradeable@5.6.1/utils/PausableUpgradeable.sol:21",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.AccessControl": [
+            {
+              "contract": "AccessControlUpgradeable",
+              "label": "_roles",
+              "type": "t_mapping(t_bytes32,t_struct(RoleData)24_storage)",
+              "src": "npm/@openzeppelin/contracts-upgradeable@5.6.1/access/AccessControlUpgradeable.sol:61",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "npm/@openzeppelin/contracts@5.6.1/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "npm/@openzeppelin/contracts@5.6.1/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "name": "flood-prediction-smart-contract",
+  "version": "4.0.0",
+  "type": "module",
+  "description": "DPA Foundation - OPAL Platform Blockchain Layer: Flood prediction, parametric triggers, mobile money payments and governance for Senegal",
+  "main": "hardhat.config.js",
+  "scripts": {
+    "postinstall": "node scripts/patch-edr-gas-cap.js",
+    "build": "npx hardhat build",
+    "test": "npx hardhat test",
+    "deploy:local": "npx hardhat run scripts/deploy-upgradeable.js --network localhost",
+    "deploy:amoy": "npx hardhat run scripts/deploy-amoy.js --network amoy",
+    "deploy:sepolia": "npx hardhat run scripts/deploy-upgradeable.js --network sepolia",
+    "upgrade": "npx hardhat run scripts/upgrade-v3.js --network localhost",
+    "stress-test": "npx hardhat run scripts/stress-test-1000.js --network localhost",
+    "node": "npx hardhat node",
+    "clean": "npx hardhat clean"
+  },
+  "keywords": [
+    "flood-prediction",
+    "opal",
+    "dpa-foundation",
+    "senegal",
+    "mobile-money",
+    "parametric-insurance",
+    "blockchain",
+    "polygon"
+  ],
+  "author": "DPA Foundation",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.0.0",
+    "@nomicfoundation/hardhat-ethers-chai-matchers": "^3.0.0",
+    "@nomicfoundation/hardhat-ignition": "^3.0.0",
+    "@nomicfoundation/hardhat-ignition-ethers": "^3.0.0",
+    "@nomicfoundation/hardhat-keystore": "^3.0.0",
+    "@nomicfoundation/hardhat-mocha": "^3.0.0",
+    "@nomicfoundation/hardhat-network-helpers": "^3.0.0",
+    "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.0",
+    "@nomicfoundation/hardhat-verify": "^3.0.0",
+    "@openzeppelin/hardhat-upgrades": "4.0.0-alpha.0",
+    "chai": "^5.1.2",
+    "dotenv": "^17.3.1",
+    "ethers": "^6.14.0",
+    "hardhat": "^3.0.0",
+    "keccak256": "^1.0.6",
+    "merkletreejs": "^0.6.0",
+    "mocha": "^11.0.0",
+    "solhint": "^6.1.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0",
+    "@openzeppelin/contracts-upgradeable": "^5.4.0"
+  }
+}
