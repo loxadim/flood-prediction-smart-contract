@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(ls /Users/babacar/Desktop/flood-prediction-smart-contract/*.md)",
-      "Bash(ls -la /Users/babacar/Desktop/flood-prediction-smart-contract/*.md)"
-    ]
-  }
-}

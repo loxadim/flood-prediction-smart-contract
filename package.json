@@ -1,6 +1,6 @@
 {
   "name": "flood-prediction-smart-contract",
-  "version": "4.0.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "DPA Foundation - OPAL Platform Blockchain Layer: Flood prediction, parametric triggers, mobile money payments and governance for Senegal",
   "main": "hardhat.config.js",
@@ -11,7 +11,7 @@
     "deploy:local": "npx hardhat run scripts/deploy-upgradeable.js --network localhost",
     "deploy:amoy": "npx hardhat run scripts/deploy-amoy.js --network amoy",
     "deploy:sepolia": "npx hardhat run scripts/deploy-upgradeable.js --network sepolia",
-    "upgrade": "npx hardhat run scripts/upgrade-v3.js --network localhost",
+    "upgrade": "npx hardhat run scripts/upgrade-contract.js --network localhost",
     "stress-test": "npx hardhat run scripts/stress-test-1000.js --network localhost",
     "node": "npx hardhat node",
     "clean": "npx hardhat clean"

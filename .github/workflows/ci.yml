@@ -1,0 +1,131 @@
+name: CI — Smart Contracts
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ───────────────────────────────────────────────
+  # 1. Compile contracts
+  # ───────────────────────────────────────────────
+  build:
+    name: Compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx hardhat build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            artifacts/
+            cache/
+          retention-days: 1
+
+  # ───────────────────────────────────────────────
+  # 2. Run test suite
+  # ───────────────────────────────────────────────
+  test:
+    name: Tests
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - run: npx hardhat test
+        env:
+          REPORT_GAS: true
+
+  # ───────────────────────────────────────────────
+  # 3. Solidity linter (solhint)
+  # ───────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx solhint 'contracts/**/*.sol' 'interfaces/**/*.sol'
+
+  # ───────────────────────────────────────────────
+  # 4. Contract size check (EIP-170: 24.576 KB)
+  # ───────────────────────────────────────────────
+  size-check:
+    name: Contract Size
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Check contract sizes (EIP-170 limit)
+        run: |
+          echo "=== Contract Size Report ==="
+          node -e "
+          import { readdir, readFile } from 'fs/promises';
+          import { join } from 'path';
+
+          const contractsDir = 'artifacts/contracts';
+          const dirs = await readdir(contractsDir);
+          let hasOversized = false;
+
+          for (const dir of dirs) {
+            if (!dir.endsWith('.sol')) continue;
+            const subDir = join(contractsDir, dir);
+            const files = await readdir(subDir);
+            for (const f of files) {
+              if (f.endsWith('.dbg.json') || !f.endsWith('.json')) continue;
+              const artifact = JSON.parse(await readFile(join(subDir, f), 'utf8'));
+              if (!artifact.deployedBytecode || artifact.deployedBytecode === '0x') continue;
+              const sizeBytes = (artifact.deployedBytecode.length - 2) / 2;
+              const sizeKB = (sizeBytes / 1024).toFixed(2);
+              const status = sizeBytes > 24576 ? '❌ OVER' : '✅';
+              console.log(\`\${status} \${f.replace('.json','')}: \${sizeKB} KB (\${sizeBytes} bytes)\`);
+              if (sizeBytes > 24576) hasOversized = true;
+            }
+          }
+          if (hasOversized) process.exit(1);
+          "

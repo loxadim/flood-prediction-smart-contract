@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OPAL Flood Prediction — Architecture Diagram</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0f172a;
+            color: #e2e8f0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 32px 24px;
+        }
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+            letter-spacing: -0.02em;
+            color: #f8fafc;
+        }
+        .subtitle {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 28px;
+        }
+        .legend {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 24px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .legend-line {
+            width: 28px;
+            height: 3px;
+            border-radius: 2px;
+        }
+        .legend-line.solid { background: #60a5fa; }
+        .legend-line.dashed {
+            background: repeating-linear-gradient(90deg, #f59e0b 0 6px, transparent 6px 10px);
+        }
+        #diagram-container {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 32px;
+            width: 100%;
+            max-width: 1200px;
+            overflow-x: auto;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+        }
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 0.75rem;
+            color: #475569;
+        }
+    </style>
+</head>
+<body>
+    <h1>OPAL Platform — System Architecture</h1>
+    <p class="subtitle">DPA Foundation Parametric Flood Insurance on Polygon PoS</p>
+
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-line solid"></div>
+            <span>On-chain call / data flow</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-line dashed"></div>
+            <span>Admin setup / off-chain trigger</span>
+        </div>
+    </div>
+
+    <div id="diagram-container">
+        <pre class="mermaid">
+graph TB
+    subgraph EXT["☁️ External Data Sources"]
+        SAT["🛰️ WASDI Satellite Platform"]
+    end
+
+    subgraph OFFCHAIN["⚙️ Off-Chain Layer"]
+        REL["🔄 Relayer Service"]
+        OPAL["📊 OPAL Analytics Platform"]
+        JKL["📱 Jokalanté Platform"]
+        MM_SVC["💳 Mobile Money APIs"]
+    end
+
+    subgraph CHAIN["⛓️ Polygon PoS Blockchain"]
+        subgraph ORACLE["🔮 Oracle Layer"]
+            WASDI["WASDIOracleConnector"]
+            MO["MultiOracle"]
+        end
+
+        subgraph CORE["🏛️ Core Layer"]
+            FPC["FloodPredictionContract\n⟨UUPS Proxy⟩"]
+        end
+
+        subgraph VERIF["✅ Verification Layer"]
+            JKT["JokalanteTargeting"]
+            KYC["KYCAMLCompliance"]
+        end
+
+        subgraph PAY["💰 Payment Layer"]
+            MMP["MobileMoneyProvider"]
+        end
+
+        subgraph GOV["🏦 Governance Layer"]
+            GOVC["OpalGovernanceUpgradeable\n⟨UUPS Proxy⟩"]
+        end
+    end
+
+    subgraph MOBILE["📲 Mobile Money Providers"]
+        OM["Orange Money"]
+        WV["Wave"]
+        FM["Free Money"]
+        EM["E-Money"]
+    end
+
+    SAT --> REL
+    REL -->|"submitSatelliteData\n(onlyRelayer)"| WASDI
+    REL -->|"submitData\n(onlyActiveOracle)"| MO
+    OPAL --> REL
+
+    FPC -->|"isConsensusReached\ngetConsensusRiskScore"| MO
+
+    JKL -.->|"updateMerkleRoot\n(Owner)"| JKT
+    JKL -.->|"createFloodTrigger\n(merkleRoot param)"| FPC
+
+    FPC -->|"verifyBeneficiary\nmarkVerified"| JKT
+    FPC -->|"batchCheckCompliance"| KYC
+
+    FPC -.-|"addAuthorizedCaller"| JKT
+    FPC -.-|"authorizeContract"| KYC
+
+    FPC -->|"batchInitiatePayments"| MMP
+
+    GOVC -->|"executeProposal\n(low-level call)"| FPC
+    GOVC -.-|"setFloodPredictionContract"| FPC
+
+    MMP -->|"PaymentInitiated\n(event)"| REL
+    REL -->|"confirmPayment\nfailPayment"| MMP
+    REL --> MM_SVC
+    MM_SVC --> OM & WV & FM & EM
+
+    classDef extStyle fill:#1e3a5f,stroke:#3b82f6,stroke-width:2px,color:#93c5fd
+    classDef offchainStyle fill:#312e4a,stroke:#8b5cf6,stroke-width:2px,color:#c4b5fd
+    classDef oracleStyle fill:#1e3a3a,stroke:#14b8a6,stroke-width:2px,color:#5eead4
+    classDef coreStyle fill:#3b1f1f,stroke:#ef4444,stroke-width:2px,color:#fca5a5
+    classDef verifStyle fill:#1a3a1a,stroke:#22c55e,stroke-width:2px,color:#86efac
+    classDef payStyle fill:#3a3520,stroke:#eab308,stroke-width:2px,color:#fde047
+    classDef govStyle fill:#2d1f3d,stroke:#a855f7,stroke-width:2px,color:#d8b4fe
+    classDef mobileStyle fill:#1f2d3d,stroke:#06b6d4,stroke-width:2px,color:#67e8f9
+
+    class SAT extStyle
+    class REL,OPAL,JKL,MM_SVC offchainStyle
+    class WASDI,MO oracleStyle
+    class FPC coreStyle
+    class JKT,KYC verifStyle
+    class MMP payStyle
+    class GOVC govStyle
+    class OM,WV,FM,EM mobileStyle
+
+    style EXT fill:#0f2744,stroke:#1e4976,stroke-width:2px,color:#93c5fd
+    style OFFCHAIN fill:#1a1832,stroke:#4c1d95,stroke-width:2px,color:#c4b5fd
+    style CHAIN fill:#111827,stroke:#374151,stroke-width:2px,color:#9ca3af
+    style ORACLE fill:#0f2929,stroke:#115e59,stroke-width:2px,color:#5eead4
+    style CORE fill:#2a1215,stroke:#991b1b,stroke-width:2px,color:#fca5a5
+    style VERIF fill:#0f2910,stroke:#166534,stroke-width:2px,color:#86efac
+    style PAY fill:#2a2510,stroke:#a16207,stroke-width:2px,color:#fde047
+    style GOV fill:#1f1530,stroke:#6b21a8,stroke-width:2px,color:#d8b4fe
+    style MOBILE fill:#0f1f2e,stroke:#155e75,stroke-width:2px,color:#67e8f9
+        </pre>
+    </div>
+
+    <p class="footer">OPAL — Flood Prediction Smart Contract System</p>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                darkMode: true,
+                background: '#1e293b',
+                primaryColor: '#1e3a5f',
+                primaryTextColor: '#e2e8f0',
+                primaryBorderColor: '#3b82f6',
+                lineColor: '#60a5fa',
+                secondaryColor: '#312e4a',
+                tertiaryColor: '#1e3a3a',
+                fontSize: '14px'
+            },
+            flowchart: {
+                htmlLabels: true,
+                curve: 'basis',
+                padding: 20,
+                nodeSpacing: 40,
+                rankSpacing: 60
+            }
+        });
+    </script>
+</body>
+</html>
