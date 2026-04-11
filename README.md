@@ -4,14 +4,14 @@
 
 [![Solidity](https://img.shields.io/badge/Solidity-%5E0.8.22%20(compiled%200.8.28)-blue)](https://soliditylang.org/)
 [![Hardhat](https://img.shields.io/badge/Hardhat-3.0.0-yellow)](https://hardhat.org/)
-[![OpenZeppelin](https://img.shields.io/badge/OpenZeppelin-5.6.1-purple)](https://openzeppelin.com/)
+[![OpenZeppelin](https://img.shields.io/badge/OpenZeppelin-%5E5.4.0-purple)](https://openzeppelin.com/)
 [![Network](https://img.shields.io/badge/Network-Polygon-8247E5)](https://polygon.technology/)
 
 ---
 
 ## Overview
 
-This is the blockchain layer of the **OPAL (Open Parametric Aid Layer)** platform, developed by the **DPA Foundation** for parametric flood insurance in Senegal and West Africa.
+This is the blockchain layer of the **OPAL (Open Parametric Aid Layer)** platform, developed by the **DPA Foundation** for parametric flood insurance in Senegal.
 
 The system uses **satellite data from WASDI** (Web Advanced Space Developer Interface) to automatically trigger flood insurance payouts to vulnerable populations via **Mobile Money** (Orange Money, Wave).
 
@@ -31,7 +31,7 @@ The system uses **satellite data from WASDI** (Web Advanced Space Developer Inte
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│                     OPAL Platform Architecture                      │
+│                     OPAL Platform Architecture                       │
 │                     (Hub-and-Spoke — FPC orchestrator)               │
 ├──────────────────────────────────────────────────────────────────────┤
 │                                                                      │
@@ -42,13 +42,13 @@ The system uses **satellite data from WASDI** (Web Advanced Space Developer Inte
 │                                                                      │
 │  ┌──────────────────┐    reads     ┌───────────────────┐             │
 │  │  FloodPrediction │ ───────────▶ │   MultiOracle     │             │
-│  │  V3 (UUPS Proxy) │    consensus │   (IQR Consensus) │             │
-│  │  ═══ ORCHESTRATOR │             └───────────────────┘             │
-│  │                   │    checks   ┌───────────────────┐             │
-│  │  • triggerFlood   │ ───────────▶│   KYCAMLCompliance│             │
-│  │  • batchPayments  │             └───────────────────┘             │
-│  │  • Merkle proofs  │    payments ┌───────────────────┐             │
-│  │                   │ ───────────▶│   MobileMoney     │             │
+│  │     (UUPS Proxy) │    consensus │   (IQR Consensus) │             │
+│  │ ═══ ORCHESTRATOR │              └───────────────────┘             │
+│  │                  │     checks   ┌───────────────────┐             │
+│  │  • triggerFlood  │  ───────────▶│   KYCAMLCompliance│             │
+│  │  • batchPayments │              └───────────────────┘             │
+│  │  • Merkle proofs │     payments ┌───────────────────┐             │
+│  │                  │  ───────────▶│   MobileMoney     │             │
 │  └──────────────────┘              │   (Orange/Wave)   │             │
 │                                    └───────────────────┘             │
 │  ┌──────────────────┐    ┌───────────────────┐                       │
@@ -57,8 +57,9 @@ The system uses **satellite data from WASDI** (Web Advanced Space Developer Inte
 │  │  upgrade control │    │  Merkle registry  │   in FPC)             │
 │  └──────────────────┘    └───────────────────┘                       │
 │                                                                      │
-│  Note: FPC stores contract addresses and calls MO, KYC, MMP         │
-│  via their interfaces. WASDI, JKT, GOV are independent contracts.    │
+│  Note: FPC stores contract addresses and calls MO, KYC, MMP, JKT    │
+│  via their interfaces. GOV calls FPC (executeProposal) and can       │
+│  configure MO (onlyOwnerOrGovernance). WASDI is standalone.          │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
