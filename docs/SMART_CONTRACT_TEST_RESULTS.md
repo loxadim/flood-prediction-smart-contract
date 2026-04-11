@@ -4,7 +4,7 @@
 **Version**: 1.0.0  
 **Framework**: Hardhat 3.x / Mocha / Chai / Ethers.js 6.x  
 **Solidity**: ^0.8.22 (compiled 0.8.28)  
-**Result**: **339 / 339 tests passing (30s)**
+**Result**: **465 / 465 tests passing (48s)**
 
 ---
 
@@ -25,17 +25,18 @@
 
 ## 1. Executive Summary
 
-The OPAL Platform smart contract suite achieves **100% test pass rate** across **339 test cases** spread over **12 test files**. Tests cover all 7 production contracts, 1 library, and 3 mock contracts, validating functional correctness, security properties, access control, edge cases, and batch scalability up to 5,000 beneficiaries.
+The OPAL Platform smart contract suite achieves **100% test pass rate** across **465 test cases** spread over **15 test files**. Tests cover all 7 production contracts, 1 library, and 3 mock contracts, validating functional correctness, security properties, access control, edge cases, and batch scalability up to 10,000 beneficiaries.
 
 | Metric | Value |
 |--------|-------|
-| Total Tests | 339 |
-| Passing | 339 |
+| Total Tests | 465 |
+| Passing | 465 |
 | Failing | 0 |
 | Pending | 0 |
-| Execution Time | ~30s |
-| Test Files | 12 |
+| Execution Time | ~48s |
+| Test Files | 15 |
 | Contracts Tested | 7 + 1 library |
+| CI/CD | GitHub Actions (build, test, lint, size-check) |
 
 ---
 
@@ -48,8 +49,8 @@ The OPAL Platform smart contract suite achieves **100% test pass rate** across *
 | Hardhat | 3.0.0 |
 | Solidity | 0.8.28 |
 | Ethers.js | 6.14.0 |
-| OpenZeppelin Contracts | 5.6.1 |
-| OpenZeppelin Upgradeable | 5.6.1 |
+| OpenZeppelin Contracts | ^5.4.0 |
+| OpenZeppelin Upgradeable | ^5.4.0 |
 | Chai | 5.1.2 |
 | Mocha | 11.0.0 |
 | MerkleTree.js | 0.6.0 |
@@ -75,31 +76,35 @@ Mocha Timeout: 120,000 ms
 | # | Test File | Contract Under Test | Tests | Focus |
 |---|-----------|---------------------|-------|-------|
 | 1 | FloodPrediction.test.js | FloodPredictionContract | 55 | Core lifecycle, RBAC, triggers, payments |
-| 2 | MultiOracle.test.js | MultiOracle | 55 | Registration, consensus, IQR outlier detection |
+| 2 | MultiOracle.test.js | MultiOracle | 76 | Registration, consensus, IQR outlier detection |
 | 3 | OpalGovernance.test.js | OpalGovernanceUpgradeable | 41 | Actors, proposals, signing, execution |
-| 4 | MobileMoneyProvider.test.js | MobileMoneyProvider | 39 | Payments, providers, retries, timeout |
+| 4 | MobileMoneyProvider.test.js | MobileMoneyProvider | 35 | Payments, providers, retries, timeout |
 | 5 | WASDIOracleConnector.test.js | WASDIOracleConnector | 42 | Satellite data, anomaly detection, relayers |
 | 6 | JokalanteTargeting.test.js | JokalanteTargeting | 36 | Merkle trees, region mgmt, authorization |
-| 7 | SecurityFixes.test.js | Multiple | 17 | Cross-cutting security validations |
-| 8 | AuditV2Fixes.test.js | FloodPredictionContract | 22 | Audit finding regression tests |
-| 9 | BatchBeneficiaries1000.test.js | FloodPredictionContract | 7 | 1,000 beneficiary scale |
-| 10 | BatchBeneficiaries2000.test.js | FloodPredictionContract | 8 | 2,000 beneficiary scale + gas |
-| 11 | BatchBeneficiaries3000.test.js | FloodPredictionContract | 8 | 3,000 beneficiary scale + gas |
-| 12 | BatchBeneficiaries5000.test.js | FloodPredictionContract | 9 | 5,000 beneficiary scale + gas |
+| 7 | KYCAMLCompliance.test.js | KYCAMLCompliance | 83 | KYC/AML attestations, compliance officer mgmt |
+| 8 | SecurityFixes.test.js | Multiple | 17 | Cross-cutting security validations |
+| 9 | AuditV2Fixes.test.js | FloodPredictionContract | 22 | Audit finding regression tests |
+| 10 | AuditFixValidation.test.js | FloodPredictionContract | 17 | Audit Round 2 regression tests |
+| 11 | BatchBeneficiaries1000.test.js | FloodPredictionContract | 7 | 1,000 beneficiary scale |
+| 12 | BatchBeneficiaries2000.test.js | FloodPredictionContract | 8 | 2,000 beneficiary scale + gas |
+| 13 | BatchBeneficiaries3000.test.js | FloodPredictionContract | 8 | 3,000 beneficiary scale + gas |
+| 14 | BatchBeneficiaries5000.test.js | FloodPredictionContract | 9 | 5,000 beneficiary scale + gas |
+| 15 | BatchBeneficiaries10000.test.js | FloodPredictionContract | 9 | 10,000 beneficiary scale + gas |
 
 ### 3.2 Test Categories
 
 ```mermaid
 pie title Test Distribution by Category
     "Core Contract Logic" : 55
-    "Oracle System" : 55
+    "Oracle System" : 76
     "Governance" : 41
-    "Mobile Money" : 39
+    "Mobile Money" : 35
     "WASDI Oracle" : 42
     "Targeting" : 36
+    "KYC/AML Compliance" : 83
     "Security" : 17
-    "Audit Regression" : 22
-    "Scale Testing" : 32
+    "Audit Regression" : 39
+    "Scale Testing" : 41
 ```
 
 ---
@@ -120,7 +125,7 @@ The central orchestrator contract tested across initialization, trigger lifecycl
 - **Emergency Mode**: Global and regional emergency activation/deactivation
 - **UUPS Upgrades**: State preservation, re-initialization prevention
 
-### 4.2 MultiOracle (55 tests)
+### 4.2 MultiOracle (76 tests)
 
 **Describe blocks:**
 
@@ -164,7 +169,7 @@ The central orchestrator contract tested across initialization, trigger lifecycl
 - Expired proposal rejection
 - allowedSelectors enforcement for proposal targets
 
-### 4.4 MobileMoneyProvider (39 tests)
+### 4.4 MobileMoneyProvider (35 tests)
 
 **Key validations:**
 - 4 providers: Orange Money (+221 77/78), Wave (+221 76), Free Money (+221 70), E-Money (+221 75)
@@ -209,6 +214,28 @@ The central orchestrator contract tested across initialization, trigger lifecycl
 - defaultExpiryDuration = 90 days
 - Proof verification for beneficiary eligibility
 
+### 4.7 KYCAMLCompliance (83 tests)
+
+**Describe blocks:**
+
+| Category | Tests | Description |
+|----------|-------|-------------|
+| Deployment & Initialization | 6 | Owner, roles, default config |
+| Compliance Officer Management | 10 | Add, remove, authorization, limits |
+| KYC Attestation Lifecycle | 18 | Submit, approve, reject, expiry |
+| AML Screening | 12 | Risk levels, sanctions, PEP checks |
+| Beneficiary Status Management | 14 | Reinstate, suspend, self-approval prevention (H-4) |
+| Batch Operations | 8 | Bulk KYC processing, skip on failure (C-1) |
+| View Functions & Queries | 8 | Status lookups, compliance stats |
+| Access Control | 7 | Role-based restrictions |
+
+**Key validations:**
+- Self-approval prevention: `submittedBy` tracked; `SelfApprovalNotAllowed` if approver == submitter (H-4 fix)
+- Individual skip on KYC failure: `KYCBeneficiarySkipped` event instead of global revert (C-1 fix)
+- Compliance officer registration and deactivation
+- KYC attestation expiry enforcement
+- AML risk scoring and sanctions list integration
+
 ---
 
 ## 5. Scale Testing — Batch Beneficiaries
@@ -229,6 +256,7 @@ Scale tests validate the platform's ability to process large beneficiary populat
 | 2,000 | 40 × 50 | 11 | 4 | ~1.4s | ✅ PASS (8/8) |
 | 3,000 | 60 × 50 | 12 | 4 | ~2.2s | ✅ PASS (8/8) |
 | 5,000 | 100 × 50 | 13 | 4 | ~3.5s | ✅ PASS (9/9) |
+| 10,000 | 200 × 50 | 14 | 4 | ~7.0s | ✅ PASS (9/9) |
 
 ### 5.3 Detailed Scale Test Output
 
@@ -295,6 +323,24 @@ Batch Payments — 5000 Beneficiaries (100 batches × 50)
 Multi-Region — 5000 across 5 Regions (1000 each)
   ✔ should distribute 1000 beneficiaries across 5 regions
 Gas Analysis — 5000 Beneficiaries (100 batches)
+  ✔ should measure average gas per batch
+  ✔ should estimate total deployment cost
+```
+
+#### 10,000 Beneficiaries (9 tests)
+
+```
+Merkle Tree — 10000 Beneficiaries
+  ✔ should generate valid Merkle root from 10000 leaves
+  ✔ should have correct tree depth for 10000 leaves (depth = 14)
+  ✔ should verify Merkle proofs for 20 sampled beneficiaries
+  ✔ should reject invalid proofs
+Batch Payments — 10000 Beneficiaries (200 batches × 50)
+  ✔ should process all 10000 beneficiaries in 200 sequential batches
+  ✔ should prevent double-payment across all 200 batches
+Multi-Region — 10000 across 5 Regions (2000 each)
+  ✔ should distribute 2000 beneficiaries across 5 regions
+Gas Analysis — 10000 Beneficiaries (200 batches)
   ✔ should measure average gas per batch
   ✔ should estimate total deployment cost
 ```
@@ -409,7 +455,7 @@ Regression tests pour les findings de l'audit Round 1 (v3) :
 
 ### 8.3 Audit Round 2 — Findings corrigés (Avril 2026)
 
-Suite à l'audit de sécurité Round 2, 6 findings supplémentaires ont été corrigés dans le code source v4.0.0. Les tests de régression sont inclus dans `AuditV2Fixes.test.js` et les fichiers de test concernés.
+Suite à l'audit de sécurité Round 2, 6 findings supplémentaires ont été corrigés dans le code source v1.0.0. Les tests de régression sont inclus dans `AuditV2Fixes.test.js` et les fichiers de test concernés.
 
 | Finding | Severity | Description | Correction | Tests |
 |---------|----------|-------------|------------|-------|
@@ -443,13 +489,13 @@ Suite à l'audit de sécurité Round 2, 6 findings supplémentaires ont été co
 
 | Metric | Value |
 |--------|-------|
-| Average tests per contract | ~45 |
-| Max tests (FloodPredictionContract, MultiOracle) | 55 |
+| Average tests per contract | ~53 |
+| Max tests (KYCAMLCompliance) | 83 |
 | Min tests (BatchBeneficiaries1000) | 7 |
 | Negative test cases (revert checks) | ~100 |
 | Edge case tests | ~45 |
 | Integration tests | ~30 |
-| Scale tests | 32 |
+| Scale tests | 41 |
 
 ---
 
@@ -464,7 +510,7 @@ Suite à l'audit de sécurité Round 2, 6 findings supplémentaires ont été co
 
 ### 10.2 Scale Boundaries
 
-- Tested up to 5,000 beneficiaries (100 batches × 50)
+- Tested up to 10,000 beneficiaries (200 batches × 50)
 - MAX_BATCH_SIZE hard-coded at 50 in contract
 - maxBeneficiariesPerRegion = 50,000 (not fully tested at that scale)
 - Block gas limit (60M) constrains batch size — current batches use ~14M (23%)
@@ -480,23 +526,26 @@ Suite à l'audit de sécurité Round 2, 6 findings supplémentaires ont été co
 ## Appendix A — Full Test Output Summary
 
 ```
-339 passing (30s)
+465 passing (48s)
 
 Test Suites:
-  ✅ AuditV2Fixes.test.js           — 22 tests
-  ✅ BatchBeneficiaries1000.test.js  —  7 tests
-  ✅ BatchBeneficiaries2000.test.js  —  8 tests
-  ✅ BatchBeneficiaries3000.test.js  —  8 tests
-  ✅ BatchBeneficiaries5000.test.js  —  9 tests
-  ✅ FloodPrediction.test.js         — 55 tests
-  ✅ JokalanteTargeting.test.js      — 36 tests
-  ✅ MobileMoneyProvider.test.js     — 39 tests
-  ✅ MultiOracle.test.js             — 55 tests
-  ✅ OpalGovernance.test.js          — 41 tests
-  ✅ SecurityFixes.test.js           — 17 tests
-  ✅ WASDIOracleConnector.test.js    — 42 tests
+  ✅ AuditFixValidation.test.js      — 17 tests
+  ✅ AuditV2Fixes.test.js             — 22 tests
+  ✅ BatchBeneficiaries1000.test.js   —  7 tests
+  ✅ BatchBeneficiaries2000.test.js   —  8 tests
+  ✅ BatchBeneficiaries3000.test.js   —  8 tests
+  ✅ BatchBeneficiaries5000.test.js   —  9 tests
+  ✅ BatchBeneficiaries10000.test.js  —  9 tests
+  ✅ FloodPrediction.test.js          — 55 tests
+  ✅ JokalanteTargeting.test.js       — 36 tests
+  ✅ KYCAMLCompliance.test.js         — 83 tests
+  ✅ MobileMoneyProvider.test.js      — 35 tests
+  ✅ MultiOracle.test.js              — 76 tests
+  ✅ OpalGovernance.test.js           — 41 tests
+  ✅ SecurityFixes.test.js            — 17 tests
+  ✅ WASDIOracleConnector.test.js     — 42 tests
   ─────────────────────────────────────────────
-  Total: 339 passing | 0 failing | 0 pending
+  Total: 465 passing | 0 failing | 0 pending
 ```
 
 ---
