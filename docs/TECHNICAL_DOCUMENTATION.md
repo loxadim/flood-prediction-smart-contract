@@ -978,7 +978,7 @@ Ciblage des beneficiaires preservant la vie privee via arbres Merkle. Gere les r
 ```
 Off-chain                          On-chain
 ┌─────────────────┐               ┌──────────────────┐
-│ Base beneficiaire│               │ JokalanteTargeting│
+│Base beneficiaire│               │JokalanteTargeting│
 │ - Nom           │               │ - merkleRoot     │
 │ - Telephone     │   hash+tree   │ - beneficiaryCount│
 │ - Montant       │──────────────>│ - isActive       │
@@ -1183,7 +1183,7 @@ submitAttestation()           approveAttestation() (H-04: officier different)
        │                            │
        ▼                            ▼
   ┌──────────┐               ┌──────────┐
-  │  PENDING  │──────────────>│ VERIFIED  │
+  │  PENDING │──────────────>│ VERIFIED │
   └────┬─────┘               └─────┬────┘
        │                           │
        ▼                           ▼
@@ -1191,7 +1191,7 @@ submitAttestation()           approveAttestation() (H-04: officier different)
        │                           │
        ▼                           ▼
   ┌──────────┐               ┌──────────┐
-  │ REJECTED  │               │ SUSPENDED │ ─── statusBeforeSuspension sauvegarde (C-03)
+  │ REJECTED │               │ SUSPENDED│ ─── statusBeforeSuspension sauvegarde (C-03)
   └──────────┘               └─────┬────┘
                                    │
                              reinstateBeneficiary()
@@ -1336,7 +1336,7 @@ Toutes les interfaces sont dans le repertoire `interfaces/`.
                          │
                          ▼
 ┌────────────┐     ┌──────────┐     validateTrigger()    ┌──────────────┐
-│  (creation) │────>│  ACTIVE   │─────────────────────────>│  VALIDATED    │
+│  (creation) │────>│  ACTIVE │─────────────────────────>│  VALIDATED    │
 └────────────┘     └────┬─────┘                           └──────┬───────┘
                         │                                        │
                    cancelTrigger()                        processBatchPayment()
@@ -1359,7 +1359,7 @@ Toutes les interfaces sont dans le repertoire `interfaces/`.
         │                       │
         ▼                       ▼
    ┌──────────┐           ┌──────────────┐
-   │  PENDING  │──────────>│  CONFIRMED    │  (terminal)
+   │  PENDING │──────────>│  CONFIRMED   │  (terminal)
    └────┬─────┘           └──────────────┘
         │
         ├── timeout ──────> EXPIRED (terminal)
@@ -1368,7 +1368,7 @@ Toutes les interfaces sont dans le repertoire `interfaces/`.
               │
               ▼
          ┌──────────┐
-         │  FAILED   │──── retryPayment() (si retryCount < 3) ──> PENDING
+         │  FAILED  │──── retryPayment() (si retryCount < 3) ──> PENDING
          └──────────┘
               │
               └── retryCount >= 3 ──> FAILED (terminal)
@@ -1381,7 +1381,7 @@ Toutes les interfaces sont dans le repertoire `interfaces/`.
         │
         ▼
    ┌──────────┐
-   │  PENDING  │
+   │  PENDING │
    └────┬─────┘
         │
         ├── signProposal() × quorum ──> APPROVED
@@ -1392,14 +1392,14 @@ Toutes les interfaces sont dans le repertoire `interfaces/`.
         │                                    │
         │                                    ▼
         │                              ┌──────────┐
-        │                              │ EXECUTED   │ (terminal)
+        │                              │ EXECUTED │ (terminal)
         │                              └──────────┘
         │
         ├── rejectProposal() (owner OU quorum rejections)
         │         │
         │         ▼
         │    ┌──────────┐
-        │    │ REJECTED   │ (terminal)
+        │    │ REJECTED │ (terminal)
         │    └──────────┘
         │
         └── deadline depasse ──> EXPIRED (terminal)
@@ -1412,14 +1412,14 @@ Toutes les interfaces sont dans le repertoire `interfaces/`.
         │
         ▼
    ┌──────────┐
-   │  PENDING  │
+   │  PENDING │
    └────┬─────┘
         │
         ├── approveAttestation() (officier different — H-04)
         │         │
         │         ▼
         │    ┌──────────┐         suspendBeneficiary()
-        │    │ VERIFIED  │───────────────────────────────> SUSPENDED
+        │    │ VERIFIED │───────────────────────────────> SUSPENDED
         │    └──────────┘                                     │
         │                                              reinstateBeneficiary()
         │                                                     │
@@ -1429,7 +1429,7 @@ Toutes les interfaces sont dans le repertoire `interfaces/`.
         │         │
         │         ▼
         │    ┌──────────┐
-        │    │ REJECTED  │
+        │    │ REJECTED │
         │    └──────────┘
         │
         └── validityPeriod depasse ──> EXPIRED

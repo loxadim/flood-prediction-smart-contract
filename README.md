@@ -57,7 +57,7 @@ The system uses **satellite data from WASDI** (Web Advanced Space Developer Inte
 │  │  upgrade control │    │  Merkle registry  │   in FPC)             │
 │  └──────────────────┘    └───────────────────┘                       │
 │                                                                      │
-│  Note: FPC stores contract addresses and calls MO, KYC, MMP, JKT    │
+│  Note: FPC stores contract addresses and calls MO, KYC, MMP, JKT     │
 │  via their interfaces. GOV calls FPC (executeProposal) and can       │
 │  configure MO (onlyOwnerOrGovernance). WASDI is standalone.          │
 └──────────────────────────────────────────────────────────────────────┘

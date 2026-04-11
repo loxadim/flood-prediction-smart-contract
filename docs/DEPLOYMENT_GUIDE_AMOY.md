@@ -2,26 +2,23 @@
 
 **Projet :** OPAL Platform — DPA Foundation
 **Réseau cible :** Polygon Amoy (Chain ID: 80002)
-**Statut actuel :** ⚠️ Script prêt — configuration wallet requise
+**Statut actuel :** ✅ Déployé sur Amoy le 3 avril 2026
 
 ---
 
-## Statut du déploiement (mis à jour le 2026-04-01)
+## Statut du déploiement (mis à jour le 2026-04-11)
 
 | Composant | Statut | Détails |
-|-----------|--------|---------|
-| Code des contrats | ✅ Complet | v4.0.0 — 7 contrats + 1 bibliothèque |
+|-----------|--------|--------|
+| Code des contrats | ✅ Complet | v1.0.0 — 7 contrats + 1 bibliothèque |
 | Script de déploiement | ✅ Prêt | `scripts/deploy-amoy.js` résumable |
-| Suite de tests | ✅ 339/339 | 12 fichiers de test, 100% passants |
+| Suite de tests | ✅ 465/465 | 15 fichiers de test, 100% passants |
 | Wallet testnet | ✅ Identifié | `0x135D3c5310046763b6bdA8A8ac0f507E1eEB1fF6` |
-| Fonds MATIC (testnet) | ✅ **0.4000 MATIC** | Suffisant pour le déploiement (~0.3 MATIC requis) |
+| Fonds MATIC (testnet) | ✅ Suffisant | ~0.3 MATIC requis |
 | RPC Amoy | ✅ Vérifié | `https://polygon-amoy.drpc.org` (opérationnel) |
-| Clé privée dans `.env` | ❌ **À remplacer** | Clé Hardhat par défaut — mettre la clé de `0x135D3c...` |
-| Déploiement effectif | ❌ Non exécuté | `deployment-amoy-progress.json` vide |
-
-> **Une seule action requise :** Remplacer `VOTRE_CLE_PRIVEE_ICI` dans le fichier `.env`
-> par la clé privée du wallet `0x135D3c5310046763b6bdA8A8ac0f507E1eEB1fF6`, puis lancer
-> `npm run deploy:amoy`.
+| Clé privée dans `.env` | ✅ Configurée | Wallet `0x135D3c...` |
+| Déploiement effectif | ✅ **Effectué** | 3 avril 2026 — `deployment-amoy-1775228383698.json` |
+| CI/CD | ✅ Actif | GitHub Actions (build, test, lint, size-check) |
 
 ---
 
@@ -70,7 +67,7 @@ npm install
 # Compiler les contrats
 npx hardhat compile
 
-# Lancer la suite de tests (doit être 339/339)
+# Lancer la suite de tests (doit être 465/465)
 npx hardhat test
 ```
 
@@ -131,10 +128,10 @@ https://amoy.polygonscan.com/address/<ADRESSE_CONTRAT>
 Étape 2/8 : WASDIOracleConnector
 Étape 3/8 : JokalanteTargeting
 Étape 4/8 : MobileMoneyProvider
-Étape 5/8 : KYCAMLCompliance
-Étape 6/8 : OpalGovernanceUpgradeable (UUPS Proxy)
-Étape 7/8 : FloodPredictionContract (UUPS Proxy)
-Étape 8/8 : Post-deployment wiring + configuration
+Étape 6/8 : KYCAMLCompliance
+Étape 7/8 : OpalGovernanceUpgradeable (UUPS Proxy)
+Étape 8/8 : FloodPredictionContract (UUPS Proxy)
+Post-deployment : Wiring + configuration
             ├── Liaison des adresses de contrats
             ├── Attribution des rôles (OPERATOR_ROLE, PAUSER_ROLE)
             ├── Configuration des budgets régionaux (6 régions)
@@ -186,6 +183,28 @@ Ce script teste :
 
 ---
 
+## Résultats du déploiement (3 avril 2026)
+
+Le déploiement a été effectué avec succès sur le réseau Amoy. Manifest : `deployment-amoy-1775228383698.json`
+
+| Contrat | Adresse | Type |
+|---------|---------|------|
+| MultiOracle | `0x16ffB4CdDfc05E5064AF0f547B149CEd40efEABA` | Direct |
+| WASDIOracleConnector | `0x76531a00CAd031aB1f1576cb7B6332C5ce6101De` | Direct |
+| JokalanteTargeting | `0x4CB2ad83eE9c187b8393E853c0fdb9d9027e9E32` | Direct |
+| MobileMoneyProvider | `0x25c34c8C4a62Bf1ab4566cA64208CAf537DC5150` | Direct |
+| KYCAMLCompliance | `0x9e319566185b01556081C1b6C66B47ed7986daD7` | Direct |
+| OpalGovernance (Proxy) | `0xC07bC08B3e35B4bd8D238aEf644BD9697b8b4B7a` | UUPS Proxy |
+| OpalGovernance (Impl) | `0x4379Deb01104fB3F4442e69a0F6CcE44C0BC7E53` | Implementation |
+| FloodPrediction (Proxy) | `0x5c9733cBdACa3B88E7F7EE35d31a5C34F972201f` | UUPS Proxy |
+| FloodPrediction (Impl) | `0xEcDD523F826fbbF6DfAAe4A0D485f91ed28D9509` | Implementation |
+
+**Deployer** : `0x135D3c5310046763b6bdA8A8ac0f507E1eEB1fF6`  
+**Durée** : 58.1s  
+**Explorer** : [FloodPrediction sur Polygonscan](https://amoy.polygonscan.com/address/0x5c9733cBdACa3B88E7F7EE35d31a5C34F972201f)
+
+---
+
 ## Livraison à DPA
 
 Une fois le déploiement effectué, fournir à DPA :
@@ -194,9 +213,9 @@ Une fois le déploiement effectué, fournir à DPA :
 2. **Les liens Polygonscan** :
    - `https://amoy.polygonscan.com/address/<FloodPredictionProxy>`
    - `https://amoy.polygonscan.com/address/<OpalGovernanceProxy>`
-3. **Les logs de test** : sortie de `npx hardhat test` (339 tests)
+3. **Les logs de test** : sortie de `npx hardhat test` (465 tests)
 4. **Le rapport de déploiement** : `PILOT_DEPLOYMENT_REPORT.md` mis à jour
 
 ---
 
-*Document généré le 2026-04-01 — OPAL Platform v4.0.0*
+*Document mis à jour le 2026-04-11 — OPAL Platform v1.0.0*
