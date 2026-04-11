@@ -4,7 +4,7 @@
 **Version**: 1.0.0
 **Date mis à jour**: 1er avril 2026 *(version initiale : juin 2025)*
 **Network**: Polygon Amoy Testnet (Chain ID: 80002)
-**Status**: ⚠️ Pre-Deployment — Wallet testnet à configurer (voir `docs/DEPLOYMENT_GUIDE_AMOY.md`)
+**Status**: ✅ Deployed — Polygon Amoy Testnet (3 avril 2026)
 
 ---
 
@@ -25,29 +25,48 @@
 
 ## 1. Executive Summary
 
-The OPAL Platform smart contract suite is **testnet-ready** for deployment on Polygon Amoy. All 339 unit tests pass, comprehensive security auditing has been completed with all 28 findings remediated (+ 6 additional findings from April 2026 audit round — all fixed), and batch scalability has been validated up to 5,000 beneficiaries. This report documents the deployment readiness, configuration procedures, and performance benchmarks for the pilot phase.
+The OPAL Platform smart contract suite has been **successfully deployed** on Polygon Amoy testnet on **3 April 2026**. All 465 unit tests pass across 15 test files, comprehensive security auditing has been completed with all 28 findings remediated (+ 6 additional findings from April 2026 audit round — all fixed), and batch scalability has been validated up to 10,000 beneficiaries. This report documents the deployment results, configuration procedures, and performance benchmarks for the pilot phase.
 
 ### Deployment Readiness (État au 1er avril 2026)
 
 | Criterion | Status | Details |
 |-----------|--------|---------|
-| Smart Contract Code | ✅ Complete | 7 contracts + 1 library, v4.0.0 |
-| Test Suite | ✅ 339/339 passing | 12 test files, 100% pass rate |
+| Smart Contract Code | ✅ Complete | 7 contracts + 1 library, v1.0.0 |
+| Test Suite | ✅ 465/465 passing | 15 test files, 100% pass rate |
 | Security Audit — Round 1 | ✅ 28/28 fixed | All H/C/M/L findings remediated |
 | Security Audit — Round 2 | ✅ 6/6 fixed | C-1, C-2, H-1, H-2, H-3, H-4 (avril 2026) |
-| Deployment Script | ✅ Ready | Resumable deploy-amoy.js |
+| Deployment Script | ✅ Executed | Resumable deploy-amoy.js |
 | UUPS Proxy Pattern | ✅ Validated | 2 upgradeable contracts tested |
-| Scale Testing | ✅ 5,000 beneficiaries | 100 batches × 50 validated |
+| Scale Testing | ✅ 10,000 beneficiaries | Up to 200 batches × 50 validated |
 | Gas Analysis | ✅ Complete | ~280,000 gas/beneficiary |
-| Testnet Wallet | ✅ Identifié | `0x135D3c5310046763b6bdA8A8ac0f507E1eEB1fF6` |
-| MATIC Testnet Funds | ✅ **0.4000 MATIC** | Suffisant (besoin ~0.3 MATIC) |
-| RPC Amoy | ✅ Opérationnel | `https://polygon-amoy.drpc.org` (vérifié 2026-04-01) |
-| Clé privée `.env` | ❌ **À renseigner** | Clé Hardhat par défaut — insérer la clé de `0x135D3c...` |
-| **Amoy Deployment** | **❌ Non exécuté** | **Prêt à lancer dès clé configurée** |
+| Testnet Wallet | ✅ Configuré | `0x135D3c5310046763b6bdA8A8ac0f507E1eEB1fF6` |
+| MATIC Testnet Funds | ✅ Suffisant | Déploiement réalisé avec succès |
+| RPC Amoy | ✅ Opérationnel | `https://polygon-amoy.drpc.org` |
+| Clé privée `.env` | ✅ Configurée | Wallet `0x135D3c...` utilisé pour le déploiement |
+| **Amoy Deployment** | **✅ Exécuté** | **3 avril 2026 — 9 contrats déployés en 58.1s** |
+| CI/CD Pipeline | ✅ Configuré | GitHub Actions (build, test, lint, size-check) |
 
-> **Une seule action requise :** Renseigner `PRIVATE_KEY` dans `.env` avec la clé du wallet
-> `0x135D3c5310046763b6bdA8A8ac0f507E1eEB1fF6`, puis exécuter `npm run deploy:amoy`.
-> Voir le guide complet : [`docs/DEPLOYMENT_GUIDE_AMOY.md`](docs/DEPLOYMENT_GUIDE_AMOY.md)
+### Deployment Results — Polygon Amoy (3 avril 2026)
+
+| Contract | Address | Type |
+|----------|---------|------|
+| MultiOracle | `0x16ffB4CdDfc05E5064AF0f547B149CEd40efEABA` | Standard |
+| WASDIOracleConnector | `0x76531a00CAd031aB1f1576cb7B6332C5ce6101De` | Standard |
+| JokalanteTargeting | `0x4CB2ad83eE9c187b8393E853c0fdb9d9027e9E32` | Standard |
+| MobileMoneyProvider | `0x25c34c8C4a62Bf1ab4566cA64208CAf537DC5150` | Standard |
+| KYCAMLCompliance | `0x9e319566185b01556081C1b6C66B47ed7986daD7` | Standard |
+| OpalGovernance (Proxy) | `0xC07bC08B3e35B4bd8D238aEf644BD9697b8b4B7a` | UUPS Proxy |
+| OpalGovernance (Impl) | `0x4379Deb01104fB3F4442e69a0F6CcE44C0BC7E53` | Implementation |
+| FloodPrediction (Proxy) | `0x5c9733cBdACa3B88E7F7EE35d31a5C34F972201f` | UUPS Proxy |
+| FloodPrediction (Impl) | `0xEcDD523F826fbbF6DfAAe4A0D485f91ed28D9509` | Implementation |
+
+**Deployment metadata:**
+- **Deployer**: `0x135D3c5310046763b6bdA8A8ac0f507E1eEB1fF6`
+- **Duration**: 58.1 seconds
+- **Governance quorum**: 3
+- **Risk threshold**: 70
+- **Regions configurées**: SN-TH (Thiès), SN-DK (Dakar), SN-SL (Saint-Louis), SN-ZG (Ziguinchor), SN-KL (Kaolack), SN-TC (Tambacounda)
+- **Manifest**: [`deployment-amoy-1775228383698.json`](../deployment-amoy-1775228383698.json)
 
 ---
 
@@ -59,7 +78,7 @@ The OPAL Platform smart contract suite is **testnet-ready** for deployment on Po
 |---------|----------|---------|--------|
 | Hardhat EDR | 1337 | Local development & testing | ✅ Active |
 | Hardhat Localhost | 31337 | Integration testing | ✅ Active |
-| Polygon Amoy | 80002 | Testnet pilot | ⚠️ Script prêt — wallet à configurer |
+| Polygon Amoy | 80002 | Testnet pilot | ✅ Déployé (3 avril 2026) |
 | Sepolia | 11155111 | Ethereum testnet | Configured |
 | Arbitrum Sepolia | 421614 | L2 testnet | Configured |
 | Polygon PoS | 137 | Mainnet production | Phase 2 |
@@ -80,8 +99,8 @@ The OPAL Platform smart contract suite is **testnet-ready** for deployment on Po
 | Package | Version | Purpose |
 |---------|---------|---------|
 | Hardhat | 3.0.0 | Development framework |
-| OpenZeppelin Contracts | 5.6.1 | Standard contract library |
-| OpenZeppelin Upgradeable | 5.6.1 | UUPS proxy support |
+| OpenZeppelin Contracts | ^5.4.0 | Standard contract library |
+| OpenZeppelin Upgradeable | ^5.4.0 | UUPS proxy support |
 | hardhat-upgrades | 4.0.0-alpha.0 | Proxy deployment tooling |
 | hardhat-verify | 3.0.0 | Contract verification |
 | ethers.js | 6.14.0 | Ethereum interaction |
@@ -98,7 +117,7 @@ The OPAL Platform smart contract suite is **testnet-ready** for deployment on Po
 | Check | Status | Evidence |
 |-------|--------|---------|
 | All contracts compile without errors | ✅ | `npx hardhat compile` → success |
-| All 339 tests pass | ✅ | `npx hardhat test` → 339 passing (30s) |
+| All 465 tests pass | ✅ | `npx hardhat test` → 465 passing (48s) |
 | No Solhint warnings (critical) | ✅ | solhint ^6.1.0 configured |
 | Storage gaps in upgradeable contracts | ✅ | __gap[48] (FPC), __gap[47] (GOV) |
 | _disableInitializers() in constructors | ✅ | Both UUPS contracts |
@@ -261,7 +280,7 @@ await multiOracle.registerOracle(oracle4Address, "WASDI-Landsat");
 ### 6.1 Overall Results
 
 ```
-339 passing (30s)
+465 passing (48s)
 0 failing
 0 pending
 ```
@@ -271,17 +290,20 @@ await multiOracle.registerOracle(oracle4Address, "WASDI-Landsat");
 | Test File | Contract | Tests | Status |
 |-----------|----------|-------|--------|
 | FloodPrediction.test.js | FloodPredictionContract | 55 | ✅ |
-| MultiOracle.test.js | MultiOracle | 55 | ✅ |
+| MultiOracle.test.js | MultiOracle | 76 | ✅ |
 | OpalGovernance.test.js | OpalGovernanceUpgradeable | 41 | ✅ |
-| MobileMoneyProvider.test.js | MobileMoneyProvider | 39 | ✅ |
+| MobileMoneyProvider.test.js | MobileMoneyProvider | 35 | ✅ |
 | WASDIOracleConnector.test.js | WASDIOracleConnector | 42 | ✅ |
 | JokalanteTargeting.test.js | JokalanteTargeting | 36 | ✅ |
+| KYCAMLCompliance.test.js | KYCAMLCompliance | 83 | ✅ |
 | SecurityFixes.test.js | Cross-contract security | 17 | ✅ |
 | AuditV2Fixes.test.js | Audit regression | 22 | ✅ |
+| AuditFixValidation.test.js | Audit Round 2 regression | 17 | ✅ |
 | BatchBeneficiaries1000.test.js | Scale (1K) | 7 | ✅ |
 | BatchBeneficiaries2000.test.js | Scale (2K) | 8 | ✅ |
 | BatchBeneficiaries3000.test.js | Scale (3K) | 8 | ✅ |
 | BatchBeneficiaries5000.test.js | Scale (5K) | 9 | ✅ |
+| BatchBeneficiaries10000.test.js | Scale (10K) | 9 | ✅ |
 
 ### 6.3 Test Categories
 
@@ -289,8 +311,8 @@ await multiOracle.registerOracle(oracle4Address, "WASDI-Landsat");
 |----------|-------|---------|
 | Functional tests | ~170 | Core contract operations |
 | Negative tests (reverts) | ~100 | Error handling, access control |
-| Scale tests | 32 | 1K–5K beneficiaries |
-| Security regression | 39 | Audit findings + security patterns |
+| Scale tests | 41 | 1K–10K beneficiaries |
+| Security regression | 56 | Audit findings + security patterns |
 
 ---
 
@@ -406,15 +428,15 @@ await multiOracle.registerOracle(oracle4Address, "WASDI-Landsat");
 
 ## 10. Next Steps
 
-### 10.1 Immediate (Pre-Testnet Deploy)
+### 10.1 Immediate (Post-Deployment Validation)
 
 | # | Task | Owner | Priority |
 |---|------|-------|----------|
-| 1 | Fund deployer wallet with Amoy MATIC | DevOps | High |
-| 2 | Configure .env with Amoy RPC + Polygonscan keys | DevOps | High |
-| 3 | Execute `npx hardhat run scripts/deploy-amoy.js --network amoy` | Developer | High |
+| 1 | ~~Fund deployer wallet with Amoy MATIC~~ | ~~DevOps~~ | ✅ Done |
+| 2 | ~~Configure .env with Amoy RPC + keys~~ | ~~DevOps~~ | ✅ Done |
+| 3 | ~~Execute deployment on Amoy~~ | ~~Developer~~ | ✅ Done (3 avril 2026) |
 | 4 | Verify all contracts on Polygonscan | Developer | High |
-| 5 | Document deployed contract addresses | Developer | High |
+| 5 | ~~Document deployed contract addresses~~ | ~~Developer~~ | ✅ Done (deployment JSON) |
 
 ### 10.2 Testnet Validation
 
