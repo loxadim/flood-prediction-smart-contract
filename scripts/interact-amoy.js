@@ -76,8 +76,8 @@ console.log("\n── 2. Regional Budgets ──\n");
 const regions = ["SN-TH", "SN-DK", "SN-SL", "SN-ZG", "SN-KL", "SN-TC"];
 for (const region of regions) {
     try {
-        const budget = await floodPrediction.regionBudgets(region);
-        console.log(`  ${region}: ${ethers.formatEther(budget)} FCFA`);
+        const budget = await floodPrediction.getRegionBudget(region);
+        console.log(`  ${region}: ${ethers.formatEther(budget.allocatedAmount)} FCFA (spent: ${ethers.formatEther(budget.spentAmount)}, active: ${budget.isActive})`);
     } catch (e) {
         console.log(`  ${region}: ⚠️ ${e.message}`);
     }
@@ -142,10 +142,15 @@ try {
     console.log(`  Beneficiary 1: ${benef1Hash}`);
     console.log(`  Beneficiary 2: ${benef2Hash}`);
 
-    // Create flood trigger for Thiès region
-    console.log("\n  Submitting flood trigger for SN-TH (riskScore=85)...");
+    // Pick a region that hasn't been triggered recently (rotate through regions)
+    const triggerRegions = ["SN-TH", "SN-DK", "SN-SL", "SN-ZG", "SN-KL", "SN-TC"];
+    const regionIndex = Number(await floodPrediction.getSystemStats().then(s => s[0])) % triggerRegions.length;
+    const targetRegion = triggerRegions[regionIndex];
+
+    // Create flood trigger
+    console.log(`\n  Submitting flood trigger for ${targetRegion} (riskScore=85)...`);
     const tx = await floodPrediction.createFloodTrigger(
-        "SN-TH",       // region
+        targetRegion,   // region (rotated)
         85,             // riskScore (CRITICAL)
         merkleRoot,     // merkleRoot
         50000,          // totalAmount (50K FCFA)
