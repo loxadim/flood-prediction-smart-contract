@@ -14,7 +14,7 @@ typechain-types/
 # Deployment manifests (contain addresses, not secrets, but keep local)
 deployment-*.json
 
-# Claude Code
+# IDE / local config
 .claude/
 
 # IDE
