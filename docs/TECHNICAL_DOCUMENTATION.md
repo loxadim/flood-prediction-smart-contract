@@ -1931,7 +1931,7 @@ Tous les evenements critiques utilisent le mot-cle `indexed` sur les champs de r
 
 | Outil | Version | Verification |
 |-------|---------|-------------|
-| Node.js | >= 18.x | `node --version` |
+| Node.js | >= 22.x | `node --version` |
 | npm | >= 9.x | `npm --version` |
 | Git | Toute version | `git --version` |
 
@@ -2436,7 +2436,7 @@ npx hardhat clean
 rm -rf node_modules && npm install
 
 # Verifier la version Node.js
-node --version  # >= 18.x requis
+node --version  # >= 22.x requis
 ```
 
 ### 32.4 Gas optimization tips
