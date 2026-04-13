@@ -11,7 +11,7 @@
 
 ## Overview
 
-This is the blockchain layer of the **OPAL (Open Parametric Aid Layer)** platform, developed by the **DPA Foundation** for parametric flood insurance in Senegal.
+This is the blockchain layer of the **OPAL** platform, developed by the **DPA Foundation** for parametric flood insurance in Senegal.
 
 The system uses **satellite data from WASDI** (Web Advanced Space Developer Interface) to automatically trigger flood insurance payouts to vulnerable populations via **Mobile Money** (Orange Money, Wave).
 
