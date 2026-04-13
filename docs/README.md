@@ -75,6 +75,6 @@ flood-prediction-smart-contract/
 
 ### Livrable 3 — Intégration API Mobile Money (sandbox) + journaux de test (Juin 2026) 🔄
 
-- `MobileMoneyProvider.sol` : ✅ Orange Money, Wave, Free Money, E-Money
+- `MobileMoneyProvider.sol` : ✅ Orange Money, Wave
 - `SMART_CONTRACT_TEST_RESULTS.md` : ✅ Résultats détaillés des 465 tests
 - Sandbox relayer off-chain : 🔄 Intégration en cours
