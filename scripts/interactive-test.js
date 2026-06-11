@@ -9,10 +9,11 @@ import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const keccak256 = require("keccak256");
 
-const { ethers } = await hre.network.connect();
-const ozUpgrades = await makeUpgrades(hre);
+const connection = await hre.network.connect();
+const { ethers } = connection;
+const ozUpgrades = await makeUpgrades(hre, connection);
 
-const [admin, operator, beneficiary1, beneficiary2] = await ethers.getSigners();
+const [admin, operator, upgrader, pauser, beneficiary1, beneficiary2] = await ethers.getSigners();
 console.log("=== OPAL Interactive E2E Test ===\n");
 
 // 1. Deploy all contracts
@@ -45,7 +46,7 @@ console.log(`  MobileMoney: ${await mobileMoney.getAddress()}`);
 const FloodPrediction = await ethers.getContractFactory("FloodPredictionContract");
 const floodPrediction = await ozUpgrades.deployProxy(
     FloodPrediction,
-    [admin.address, operator.address, operator.address, operator.address],
+    [admin.address, operator.address, upgrader.address, pauser.address],
     { kind: "uups" }
 );
 await floodPrediction.waitForDeployment();
@@ -82,7 +83,16 @@ console.log(`  Merkle Root: ${merkleRoot}`);
 
 // 4. Create flood trigger
 console.log("\n--- Step 4: Flood Trigger ---");
-const tx = await floodPrediction.createFloodTrigger(
+// eventId is an indexed string in FloodTriggerCreated, so ethers can only
+// decode it as a hash from the log; read the real value via a static call.
+const eventId = await floodPrediction.connect(operator).createFloodTrigger.staticCall(
+    "SN-TH",    // region
+    85,          // riskScore (CRITICAL)
+    merkleRoot,  // merkleRoot
+    50000,       // totalAmount (50K FCFA)
+    2            // beneficiaryCount
+);
+const tx = await floodPrediction.connect(operator).createFloodTrigger(
     "SN-TH",    // region
     85,          // riskScore (CRITICAL)
     merkleRoot,  // merkleRoot
@@ -92,7 +102,7 @@ const tx = await floodPrediction.createFloodTrigger(
 const receipt = await tx.wait();
 const event = receipt.logs.find(l => l.fragment?.name === "FloodTriggerCreated");
 if (event) {
-    console.log(`  Trigger created: eventId=${event.args[0]}`);
+    console.log(`  Trigger created: eventId=${eventId}`);
     console.log(`  Risk score: ${event.args[2]}, Region: ${event.args[1]}`);
 }
 
