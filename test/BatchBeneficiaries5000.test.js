@@ -23,7 +23,7 @@ describe("Batch Beneficiaries — 5000 Scale Tests", function () {
     this.timeout(600000); // 10 minutes — large-scale test
 
     let floodPrediction, multiOracle, jokalante, mobileMoney, opalGov;
-    let admin, operator;
+    let admin, operator, upgrader, pauser;
     let beneficiaries, leaves, tree, merkleRoot;
     let eventId; // single trigger for all 5000 beneficiaries
 
@@ -76,7 +76,7 @@ describe("Batch Beneficiaries — 5000 Scale Tests", function () {
         console.log("  ║  OPAL Platform — 5000 Beneficiaries Scale Test   ║");
         console.log("  ╚══════════════════════════════════════════════════╝\n");
 
-        [admin, operator] = await ethers.getSigners();
+        [admin, operator, upgrader, pauser] = await ethers.getSigners();
 
         // ── Deploy contracts ────────────────────────────────────────────
         console.log("  [1/3] Deploying contracts...");
@@ -97,7 +97,7 @@ describe("Batch Beneficiaries — 5000 Scale Tests", function () {
         await opalGov.waitForDeployment();
 
         const FloodPred = await ethers.getContractFactory("FloodPredictionContract");
-        floodPrediction = await ozUpgrades.deployProxy(FloodPred, [admin.address, operator.address, operator.address, operator.address], { kind: "uups" });
+        floodPrediction = await ozUpgrades.deployProxy(FloodPred, [admin.address, operator.address, upgrader.address, pauser.address], { kind: "uups" });
         await floodPrediction.waitForDeployment();
 
         await floodPrediction.setContractAddresses(

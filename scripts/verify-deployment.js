@@ -44,6 +44,12 @@ function findLatestDeployment() {
 
 const deployment = findLatestDeployment();
 const contracts = deployment.contracts;
+const resolveContract = (...names) => {
+    for (const name of names) {
+        if (contracts[name]) return contracts[name];
+    }
+    return undefined;
+};
 
 let passed = 0;
 let failed = 0;
@@ -76,6 +82,10 @@ console.log(`  Timestamp: ${deployment.timestamp}\n`);
 
 console.log("─── 1. Contract Bytecode ───");
 for (const [name, address] of Object.entries(contracts)) {
+    if (typeof address !== "string" || !ethers.isAddress(address)) {
+        warn(name, `Skipping non-address value: ${address}`);
+        continue;
+    }
     try {
         const code = await ethers.provider.getCode(address);
         if (code && code.length > 2) {
@@ -92,7 +102,7 @@ for (const [name, address] of Object.entries(contracts)) {
 // 2. FloodPrediction roles
 // ========================================
 console.log("\n─── 2. FloodPrediction Roles ───");
-const floodAddr = contracts.FloodPredictionProxy;
+const floodAddr = resolveContract("FloodPredictionProxy", "FloodPredictionContractV3", "FloodPrediction");
 if (floodAddr) {
     const flood = await ethers.getContractAt("FloodPredictionContract", floodAddr);
 
@@ -130,7 +140,7 @@ if (floodAddr) {
     console.log("\n─── 3. Contract Wiring ───");
     const wiring = {
         multiOracle: contracts.MultiOracle,
-        governance: contracts.OpalGovernanceProxy,
+        governance: resolveContract("OpalGovernanceProxy", "OpalGovernance"),
         jokalanteTargeting: contracts.JokalanteTargeting,
         mobileMoneyProvider: contracts.MobileMoneyProvider,
     };
@@ -177,9 +187,9 @@ if (floodAddr) {
     const regions = deployment.config?.regions ?? ["SN-TH", "SN-DK", "SN-SL", "SN-ZG", "SN-KL", "SN-TC"];
     for (const region of regions) {
         try {
-            const budget = await flood.getRemainingBudget(region);
+            const budget = await flood.getRegionBudgetRemaining(region);
             if (budget > 0n) {
-                ok(`${region}: ${ethers.formatEther(budget)} budget allocated`);
+                ok(`${region}: ${budget} CFA budget available`);
             } else {
                 warn(region, "No budget allocated (0)");
             }
@@ -194,8 +204,8 @@ if (floodAddr) {
     console.log("\n─── 5. System Stats ───");
     try {
         const stats = await flood.getSystemStats();
-        ok(`Triggers: ${stats[0]}, Payments: ${stats[1]}, Regions: ${stats[2]}`);
-        ok(`Total Budget: ${ethers.formatEther(stats[3])}, Version: V${stats[5]}`);
+        ok(`Triggers: ${stats[0]}, Payments: ${stats[1]}, Disbursed: ${stats[2]} CFA`);
+        ok(`Total Budget: ${stats[3]} CFA, Total Spent: ${stats[4]} CFA, Version: V${stats[5]}`);
     } catch (e) {
         fail("getSystemStats()", e.message);
     }
@@ -207,12 +217,12 @@ if (floodAddr) {
 // 5. OpalGovernance
 // ========================================
 console.log("\n─── 6. Governance ───");
-const govAddr = contracts.OpalGovernanceProxy;
+const govAddr = resolveContract("OpalGovernanceProxy", "OpalGovernance");
 if (govAddr) {
     const gov = await ethers.getContractAt("OpalGovernanceUpgradeable", govAddr);
     try {
-        const quorum = await gov.requiredSignatures();
-        const actorCount = await gov.actorCount();
+        const quorum = await gov.getQuorum();
+        const actorCount = await gov.getActiveActorCount();
         ok(`Quorum: ${quorum} signatures required, ${actorCount} actors registered`);
 
         if (Number(actorCount) < Number(quorum)) {
@@ -233,7 +243,7 @@ const oracleAddr = contracts.MultiOracle;
 if (oracleAddr) {
     const oracle = await ethers.getContractAt("MultiOracle", oracleAddr);
     try {
-        const oracleCount = await oracle.oracleCount();
+        const oracleCount = await oracle.getOracleCount();
         const threshold = await oracle.consensusThreshold();
         ok(`Oracles: ${oracleCount}, Consensus threshold: ${threshold}%`);
     } catch (e) {

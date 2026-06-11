@@ -333,6 +333,137 @@ describe("OpalGovernanceUpgradeable", function () {
     });
 
     // =========================================================================
+    //          EMERGENCY_TRIGGER SELECTOR WHITELIST (H12-GOV)
+    // =========================================================================
+    describe("EMERGENCY_TRIGGER selector whitelist (H12-GOV)", function () {
+        let dummy, selector, data;
+
+        beforeEach(async function () {
+            await governance.addGovernanceActor(actor1.address, "Gov1", "GOVERNOR");
+            await governance.addGovernanceActor(actor2.address, "Gov2", "GOVERNOR");
+
+            // Deploy a target contract owned by `governance` itself, so the
+            // executeProposal -> setExecutionGasLimit() call passes the
+            // target's onlyOwner check.
+            const OpalGov = await ethers.getContractFactory("OpalGovernanceUpgradeable");
+            dummy = await ozUpgrades.deployProxy(OpalGov, [governance.target, 2], { kind: "uups" });
+            await dummy.waitForDeployment();
+            await governance.setFloodPredictionContract(dummy.target);
+
+            selector = dummy.interface.getFunction("setExecutionGasLimit").selector;
+            data = dummy.interface.encodeFunctionData("setExecutionGasLimit", [600_000]);
+        });
+
+        it("should revert setEmergencyAllowedSelector if not owner", async function () {
+            await expect(
+                governance.connect(actor1).setEmergencyAllowedSelector(selector, true)
+            ).to.be.revertedWithCustomError(governance, "OwnableUnauthorizedAccount");
+        });
+
+        it("should batch-set emergency selectors and revert on length mismatch", async function () {
+            await expect(governance.setEmergencyAllowedSelectorBatch([selector], [true]))
+                .to.emit(governance, "EmergencySelectorWhitelisted")
+                .withArgs(selector, true);
+
+            await expect(
+                governance.setEmergencyAllowedSelectorBatch([selector], [true, false])
+            ).to.be.revertedWithCustomError(governance, "ArrayLengthMismatch");
+        });
+
+        it("should revert EMERGENCY_TRIGGER execution of a selector only in the general whitelist", async function () {
+            await governance.setAllowedSelector(selector, true); // general whitelist only, not emergency
+
+            // ProposalType.EMERGENCY_TRIGGER = 0
+            await governance.connect(owner).createProposal(0, "Mislabeled emergency", data, "", ethers.ZeroAddress);
+            await governance.connect(actor1).signProposal(0); // quorum reached, no time advance
+
+            await expect(
+                governance.connect(actor2).executeProposal(0)
+            ).to.be.revertedWithCustomError(governance, "SelectorNotWhitelisted");
+        });
+
+        it("should execute EMERGENCY_TRIGGER proposal immediately when selector is emergency-whitelisted", async function () {
+            await governance.setEmergencyAllowedSelectorBatch([selector], [true]);
+
+            await governance.connect(owner).createProposal(0, "Real emergency", data, "", ethers.ZeroAddress);
+            await governance.connect(actor1).signProposal(0); // quorum reached, no time advance needed
+
+            await expect(governance.connect(actor2).executeProposal(0))
+                .to.emit(governance, "ProposalExecuted")
+                .withArgs(0, actor2.address);
+
+            expect(await dummy.executionGasLimit()).to.equal(600_000);
+        });
+
+        it("should revert PARAMETER_CHANGE execution of a selector only in the emergency whitelist", async function () {
+            await governance.setEmergencyAllowedSelectorBatch([selector], [true]); // emergency whitelist only
+
+            // ProposalType.PARAMETER_CHANGE = 1
+            await governance.connect(owner).createProposal(1, "Param change", data, "", ethers.ZeroAddress);
+            await governance.connect(actor1).signProposal(0);
+            await networkHelpers.time.increase(3601); // past EXECUTION_DELAY
+
+            await expect(
+                governance.connect(actor2).executeProposal(0)
+            ).to.be.revertedWithCustomError(governance, "SelectorNotWhitelisted");
+        });
+
+        it("should still enforce EXECUTION_DELAY for PARAMETER_CHANGE even when selector is allowed", async function () {
+            await governance.setAllowedSelector(selector, true);
+
+            await governance.connect(owner).createProposal(1, "Param change", data, "", ethers.ZeroAddress);
+            await governance.connect(actor1).signProposal(0); // quorum reached, no time advance
+
+            await expect(
+                governance.connect(actor2).executeProposal(0)
+            ).to.be.revertedWithCustomError(governance, "TimelockNotElapsed");
+
+            await networkHelpers.time.increase(3601);
+
+            await expect(governance.connect(actor2).executeProposal(0))
+                .to.emit(governance, "ProposalExecuted")
+                .withArgs(0, actor2.address);
+
+            expect(await dummy.executionGasLimit()).to.equal(600_000);
+        });
+    });
+
+    // =========================================================================
+    //          UPGRADE PROPOSAL WHITELISTING (H13-GOV)
+    // =========================================================================
+    describe("UPGRADE proposal whitelisting (H13-GOV)", function () {
+        it("should whitelist itself and approveUpgrade() as an allowed target/selector on initialize", async function () {
+            const approveUpgradeSelector = governance.interface.getFunction("approveUpgrade").selector;
+            expect(await governance.allowedTargets(governance.target)).to.be.true;
+            expect(await governance.allowedSelectors(approveUpgradeSelector)).to.be.true;
+        });
+
+        it("should execute an UPGRADE proposal that approves a new implementation", async function () {
+            await governance.addGovernanceActor(actor1.address, "Gov1", "GOVERNOR");
+            await governance.addGovernanceActor(actor2.address, "Gov2", "GOVERNOR");
+
+            // Deploy a standalone contract instance to act as the new implementation address
+            const OpalGov = await ethers.getContractFactory("OpalGovernanceUpgradeable");
+            const newImpl = await OpalGov.deploy();
+            await newImpl.waitForDeployment();
+
+            const data = governance.interface.encodeFunctionData("approveUpgrade", [newImpl.target]);
+
+            // ProposalType.UPGRADE = 3, target = governance itself (self-call to approveUpgrade)
+            await governance.connect(owner).createProposal(3, "Approve new implementation", data, "", governance.target);
+            await governance.connect(actor1).signProposal(0); // quorum reached
+
+            await networkHelpers.time.increase(3601); // past EXECUTION_DELAY
+
+            await expect(governance.connect(actor2).executeProposal(0))
+                .to.emit(governance, "ProposalExecuted")
+                .withArgs(0, actor2.address);
+
+            expect(await governance.approvedUpgrades(newImpl.target)).to.be.true;
+        });
+    });
+
+    // =========================================================================
     //                      CONFIGURATION
     // =========================================================================
     describe("Configuration", function () {

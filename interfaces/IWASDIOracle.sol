@@ -42,6 +42,8 @@ interface IWASDIOracle {
 
     // Events
     event SatelliteDataSubmitted(string indexed region, uint256 riskScore, uint256 rainfall, string source);
-    event HighRiskDetected(string indexed region, uint256 riskScore, uint256 timestamp);
+    // `region` is non-indexed so off-chain consumers (e.g. the relayer) can
+    // decode it directly as a string instead of an indexed-topic hash.
+    event HighRiskDetected(string region, uint256 riskScore, uint256 timestamp);
     event DataExpired(string indexed region, uint256 lastUpdate);
 }

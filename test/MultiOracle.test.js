@@ -309,6 +309,23 @@ describe("MultiOracle", function () {
             ).to.be.revertedWithCustomError(multiOracle, "ConsensusNotReached");
         });
 
+        it("should treat consensus as stale once dataFreshnessThreshold elapses", async function () {
+            await multiOracle.connect(oracle1).submitData("dakar", 80, "WASDI");
+            await multiOracle.connect(oracle2).submitData("dakar", 82, "CHIRPS");
+            await multiOracle.connect(oracle3).submitData("dakar", 78, "GFS");
+
+            expect(await multiOracle.isConsensusReached("dakar")).to.be.true;
+
+            // Advance past dataFreshnessThreshold (default 1 hour)
+            await ethers.provider.send("evm_increaseTime", [3601]);
+            await ethers.provider.send("evm_mine");
+
+            expect(await multiOracle.isConsensusReached("dakar")).to.be.false;
+            await expect(
+                multiOracle.getConsensusRiskScore("dakar")
+            ).to.be.revertedWithCustomError(multiOracle, "ConsensusNotReached");
+        });
+
         it("should detect outliers with IQR (4+ submissions)", async function () {
             // Register 5th oracle already done in beforeEach
             // Submit: [70, 72, 74, 76, 10] — 10 is an outlier

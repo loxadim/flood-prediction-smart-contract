@@ -13,12 +13,12 @@ const ozUpgrades = await makeUpgrades(hre, connection);
 
 describe("Security Fixes", function () {
     let floodPrediction, multiOracle, governance, targeting, mobileMoney;
-    let admin, operator, attacker;
+    let admin, operator, upgrader, pauser, attacker;
 
     const OPERATOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("OPERATOR_ROLE"));
 
     beforeEach(async function () {
-        [admin, operator, attacker] = await ethers.getSigners();
+        [admin, operator, upgrader, pauser, attacker] = await ethers.getSigners();
 
         const MultiOracle = await ethers.getContractFactory("MultiOracle");
         multiOracle = await MultiOracle.deploy();
@@ -37,7 +37,7 @@ describe("Security Fixes", function () {
         await mobileMoney.waitForDeployment();
 
         const FloodPrediction = await ethers.getContractFactory("FloodPredictionContract");
-        floodPrediction = await ozUpgrades.deployProxy(FloodPrediction, [admin.address, operator.address, operator.address, operator.address], { kind: "uups" });
+        floodPrediction = await ozUpgrades.deployProxy(FloodPrediction, [admin.address, operator.address, upgrader.address, pauser.address], { kind: "uups" });
         await floodPrediction.waitForDeployment();
 
         await floodPrediction.setContractAddresses(

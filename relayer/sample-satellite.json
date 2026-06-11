@@ -1,0 +1,18 @@
+[
+  {
+    "region": "Dakar",
+    "riskScore": 78,
+    "rainfall": 42,
+    "soilMoisture": 31,
+    "waterLevel": 12,
+    "satelliteSource": "Sentinel-1"
+  },
+  {
+    "region": "Saint-Louis",
+    "riskScore": 65,
+    "rainfall": 24,
+    "soilMoisture": 19,
+    "waterLevel": 8,
+    "satelliteSource": "Sentinel-2"
+  }
+]

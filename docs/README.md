@@ -22,7 +22,7 @@ Ce dossier contient l'ensemble des livrables documentaires correspondant aux 8 v
 | 4 | [Résultats de tests des smart contracts](./SMART_CONTRACT_TEST_RESULTS.md) | Volet 4 | Avril 2026 | ✅ Livré |
 | 5 | [Évaluation sécurité et conformité](./SECURITY_COMPLIANCE_ASSESSMENT.md) | Volet 5 | Avril 2026 | ✅ Livré |
 | 6 | [Plan d'intégration avec la plateforme OPAL](./OPAL_INTEGRATION_PLAN.md) | Volet 6 | Avril–Mai 2026 | ✅ Livré |
-| 7 | [Rapport de déploiement pilote](./PILOT_DEPLOYMENT_REPORT.md) | Volet 7 | Juin 2026 | 🔄 En cours |
+| 7 | [Rapport de déploiement pilote](./PILOT_DEPLOYMENT_REPORT.md) | Volet 7 | Juin 2026 | ✅ Livré |
 | 8 | [Documentation technique](./TECHNICAL_DOCUMENTATION.md) | Volet 8 | Juin 2026 | ✅ Livré |
 | 8b | [Guide de déploiement Amoy](./DEPLOYMENT_GUIDE_AMOY.md) | Volet 7–8 | Juin 2026 | ✅ Livré |
 
@@ -67,7 +67,7 @@ flood-prediction-smart-contract/
 - Spécifications du WASDIOracleConnector (WASDI/satellite)
 - **Documents :** `BLOCKCHAIN_ARCHITECTURE_DESIGN.md`, `SMART_CONTRACT_SPECIFICATIONS.md`
 
-### Livrable 2 — Smart contracts déployés sur testnet + documentation de sécurité (Avril–Mai 2026) 🔄
+### Livrable 2 — Smart contracts déployés sur testnet + documentation de sécurité (Avril–Mai 2026) ✅
 
 - Code des contrats : ✅ v1.0.0 complet (7 contrats, 465 tests passants)
 - Déploiement Polygon Amoy : ✅ 9 contrats déployés (voir `docs/DEPLOYMENT_GUIDE_AMOY.md`)

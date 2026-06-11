@@ -554,23 +554,31 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
     }
 
     /**
-     * @notice Checks whether consensus has been reached for a region.
+     * @notice Checks whether a fresh consensus has been reached for a region.
+     * @dev A consensus older than `dataFreshnessThreshold` is treated as not
+     *      reached, so callers fall back to their own data instead of
+     *      cross-checking against stale oracle output.
      * @param region The geographic region identifier.
-     * @return `true` if a valid consensus exists, `false` otherwise.
+     * @return `true` if a valid, fresh consensus exists, `false` otherwise.
      */
     function isConsensusReached(string calldata region) external view override returns (bool) {
-        return _latestConsensus[region].reached;
+        ConsensusResult storage consensus = _latestConsensus[region];
+        return consensus.reached && (block.timestamp - consensus.timestamp <= dataFreshnessThreshold);
     }
 
     /**
      * @notice Returns the consensus risk score for a region.
-     * @dev Reverts if no consensus has been reached.
+     * @dev Reverts if no consensus has been reached or the latest consensus
+     *      is older than `dataFreshnessThreshold`.
      * @param region The geographic region identifier.
      * @return The consensus risk score in [0, 100].
      */
     function getConsensusRiskScore(string calldata region) external view override returns (uint256) {
-        if (!_latestConsensus[region].reached) revert ConsensusNotReached();
-        return _latestConsensus[region].consensusRiskScore;
+        ConsensusResult storage consensus = _latestConsensus[region];
+        if (!consensus.reached || block.timestamp - consensus.timestamp > dataFreshnessThreshold) {
+            revert ConsensusNotReached();
+        }
+        return consensus.consensusRiskScore;
     }
 
     // =========================================================================

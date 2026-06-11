@@ -218,6 +218,24 @@ describe("MobileMoneyProvider", function () {
                 sonatel.connect(relayer1).confirmPayment(paymentId, "late-tx")
             ).to.be.revertedWithCustomError(sonatel, "PaymentExpiredError");
         });
+
+        it("should re-reserve regionDailySpend under the retry day when retryPayment crosses a day boundary", async function () {
+            const limit = AMOUNT;
+            await sonatel.setDailyLimit(REGION, limit);
+
+            await sonatel.connect(relayer1).failPayment(paymentId, "Network error");
+
+            // Advance into the next UTC day bucket (block.timestamp / 1 days)
+            await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
+            await ethers.provider.send("evm_mine", []);
+
+            await sonatel.connect(relayer1).retryPayment(paymentId);
+
+            // The retried payment now reserves today's allowance again
+            await expect(
+                sonatel.connect(relayer1).initiatePayment(HASH_B, AMOUNT, WAVE_PHONE_HASH, REGION, 0)
+            ).to.be.revertedWithCustomError(sonatel, "DailyLimitExceeded");
+        });
     });
 
     // =========================================================================
@@ -278,6 +296,33 @@ describe("MobileMoneyProvider", function () {
                 [id1, id2],
                 ["TX-A", "TX-B"]
             );
+        });
+
+        it("should refund regionDailySpend when batchConfirmPayments expires a stale payment", async function () {
+            const limit = AMOUNT;
+            await sonatel.setDailyLimit(REGION, limit);
+
+            const tx = await sonatel.connect(relayer1).initiatePayment(
+                HASH_A, AMOUNT, VALID_PHONE_HASH, REGION, 0
+            );
+            const receipt = await tx.wait();
+            const paymentId = receipt.logs.find(
+                l => l.fragment && l.fragment.name === "PaymentInitiated"
+            ).args[0];
+
+            // Advance past timeout
+            await ethers.provider.send("evm_increaseTime", [31 * 60]);
+            await ethers.provider.send("evm_mine", []);
+
+            await sonatel.connect(relayer1).batchConfirmPayments([paymentId], ["late-tx"]);
+
+            const payment = await sonatel.getPayment(paymentId);
+            expect(payment.status).to.equal(3); // EXPIRED
+
+            // The refunded allowance should now permit a new payment
+            await expect(
+                sonatel.connect(relayer1).initiatePayment(HASH_B, AMOUNT, WAVE_PHONE_HASH, REGION, 0)
+            ).to.not.revert(ethers);
         });
     });
 
@@ -355,6 +400,37 @@ describe("MobileMoneyProvider", function () {
             await ethers.provider.send("evm_mine", []);
 
             await sonatel.expireStalePayments([paymentId]);
+        });
+
+        it("should refund regionDailySpend when expireStalePayments expires a payment", async function () {
+            const limit = AMOUNT;
+            await sonatel.setDailyLimit(REGION, limit);
+
+            const tx = await sonatel.connect(relayer1).initiatePayment(
+                HASH_A, AMOUNT, VALID_PHONE_HASH, REGION, 0
+            );
+            const receipt = await tx.wait();
+            const paymentId = receipt.logs.find(
+                l => l.fragment && l.fragment.name === "PaymentInitiated"
+            ).args[0];
+
+            // Daily allowance is now fully reserved
+            await expect(
+                sonatel.connect(relayer1).initiatePayment(HASH_B, AMOUNT, WAVE_PHONE_HASH, REGION, 0)
+            ).to.be.revertedWithCustomError(sonatel, "DailyLimitExceeded");
+
+            // Advance past timeout and expire the stale payment
+            await ethers.provider.send("evm_increaseTime", [31 * 60]);
+            await ethers.provider.send("evm_mine", []);
+            await sonatel.expireStalePayments([paymentId]);
+
+            const payment = await sonatel.getPayment(paymentId);
+            expect(payment.status).to.equal(3); // EXPIRED
+
+            // The refunded allowance should now permit a new payment
+            await expect(
+                sonatel.connect(relayer1).initiatePayment(HASH_B, AMOUNT, WAVE_PHONE_HASH, REGION, 0)
+            ).to.not.revert(ethers);
         });
     });
 

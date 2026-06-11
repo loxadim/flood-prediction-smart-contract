@@ -212,12 +212,13 @@ contract MockBeneficiaryRegistry {
 
     /**
      * @dev Compute a Merkle leaf for a beneficiary (matches FloodPredictionContract format)
-     * leaf = keccak256(abi.encode(beneficiaryHash, amount))
+     * leaf = keccak256(bytes.concat(keccak256(abi.encode(identityHash, amount))))
+     * V-01 fix: double-hash to prevent second-preimage attacks (OpenZeppelin standard)
      */
     function computeLeaf(string calldata externalId) external view returns (bytes32) {
         if (!_beneficiaries[externalId].registered) revert BeneficiaryNotFound(externalId);
         Beneficiary memory b = _beneficiaries[externalId];
-        return keccak256(abi.encode(b.identityHash, b.amount));
+        return keccak256(bytes.concat(keccak256(abi.encode(b.identityHash, b.amount))));
     }
 
     /**
@@ -230,7 +231,7 @@ contract MockBeneficiaryRegistry {
         bytes32[] memory leaves = new bytes32[](ids.length);
         for (uint256 i = 0; i < ids.length; i++) {
             Beneficiary memory b = _beneficiaries[ids[i]];
-            leaves[i] = keccak256(abi.encode(b.identityHash, b.amount));
+            leaves[i] = keccak256(bytes.concat(keccak256(abi.encode(b.identityHash, b.amount))));
         }
         return leaves;
     }
@@ -245,7 +246,7 @@ contract MockBeneficiaryRegistry {
     ) external view returns (bool) {
         if (!_beneficiaries[externalId].registered) revert BeneficiaryNotFound(externalId);
         Beneficiary memory b = _beneficiaries[externalId];
-        bytes32 leaf = keccak256(abi.encode(b.identityHash, b.amount));
+        bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(b.identityHash, b.amount))));
         return MerkleProof.verify(proof, merkleRoot, leaf);
     }
 

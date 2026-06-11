@@ -8,12 +8,14 @@
     "postinstall": "node scripts/patch-edr-gas-cap.js",
     "build": "npx hardhat build",
     "test": "npx hardhat test",
+    "test:relayer": "mocha test/Relayer.test.js --timeout 10000",
     "deploy:local": "npx hardhat run scripts/deploy-upgradeable.js --network localhost",
     "deploy:amoy": "npx hardhat run scripts/deploy-amoy.js --network amoy",
     "deploy:sepolia": "npx hardhat run scripts/deploy-upgradeable.js --network sepolia",
     "upgrade": "npx hardhat run scripts/upgrade-contract.js --network localhost",
     "stress-test": "npx hardhat run scripts/stress-test-1000.js --network localhost",
     "node": "npx hardhat node",
+    "relayer:start": "node relayer/index.js",
     "clean": "npx hardhat clean"
   },
   "keywords": [

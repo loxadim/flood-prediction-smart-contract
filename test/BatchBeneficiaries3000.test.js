@@ -20,7 +20,7 @@ const ozUpgrades = await makeUpgrades(hre, connection);
 
 describe("Batch Beneficiaries — 3000 Scale Tests", function () {
     let floodPrediction, multiOracle, jokalante, mobileMoney, opalGov;
-    let admin, operator;
+    let admin, operator, upgrader, pauser;
     let beneficiaries, leaves, tree, merkleRoot;
 
     const OPERATOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("OPERATOR_ROLE"));
@@ -67,7 +67,7 @@ describe("Batch Beneficiaries — 3000 Scale Tests", function () {
 
     beforeEach(async function () {
         this.timeout(60000);
-        [admin, operator] = await ethers.getSigners();
+        [admin, operator, upgrader, pauser] = await ethers.getSigners();
 
         console.log("\n  [1/3] Deploying contracts...");
         const MultiOracle = await ethers.getContractFactory("MultiOracle");
@@ -87,7 +87,7 @@ describe("Batch Beneficiaries — 3000 Scale Tests", function () {
         await opalGov.waitForDeployment();
 
         const FloodPred = await ethers.getContractFactory("FloodPredictionContract");
-        floodPrediction = await ozUpgrades.deployProxy(FloodPred, [admin.address, operator.address, operator.address, operator.address], { kind: "uups" });
+        floodPrediction = await ozUpgrades.deployProxy(FloodPred, [admin.address, operator.address, upgrader.address, pauser.address], { kind: "uups" });
         await floodPrediction.waitForDeployment();
 
         await floodPrediction.setContractAddresses(

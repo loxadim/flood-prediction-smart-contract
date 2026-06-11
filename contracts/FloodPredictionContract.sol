@@ -30,7 +30,7 @@ import "./libs/FloodPredictionLib.sol";
  * Architecture:
  * - UUPS Proxy Upgradeable
  * - RBAC: ADMIN_ROLE, OPERATOR_ROLE, UPGRADER_ROLE, PAUSER_ROLE
- * - Parametric triggers: 70% risk threshold (standard), 85% (governance override)
+ * - Parametric triggers: 70% risk threshold (standard), admin-only governance override path
  * - Adaptive cooldown: 10min (critical), 30min (high), 1h (normal)
  * - Replay protection: chainId + nonce
  * - Batch payment cap: 50 beneficiaries per transaction
@@ -138,6 +138,14 @@ contract FloodPredictionContract is
     /// to absorb TOCTOU slippage between consensus reads and block inclusion.
     uint256 public oracleTolerance;
 
+    /// @notice V-05 fix: tracks whether the Mobile Money dispatch for a given
+    /// (eventId, beneficiaryHash) payment has been successfully sent to
+    /// MobileMoneyProvider. Set on the success path of
+    /// _processAndInitiateMobileMoney() and on a successful
+    /// retryMobileMoneyDispatch(). Used to make retries one-shot — a payment
+    /// that is already dispatched cannot be re-dispatched.
+    mapping(bytes32 => bool) public mobileMoneyDispatched;
+
     // ============================================
     // Events (additional, beyond IFloodPrediction)
     // ============================================
@@ -158,6 +166,8 @@ contract FloodPredictionContract is
     event GovernanceOverride(string indexed eventId, address governor, string reason);
     event MobileMoneyPaymentsInitiated(string indexed eventId, uint256 count, uint256 totalAmount);
     event MobileMoneyPaymentsFailed(string indexed eventId, uint256 count, uint256 totalAmount);
+    /// @notice Emitted when a previously-failed Mobile Money dispatch is retried (V-05 fix)
+    event MobileMoneyDispatchRetried(string indexed eventId, uint256 count, uint256 totalAmount);
     event BudgetDeactivated(string indexed region, address operator);
     event BudgetCommitted(string indexed region, uint256 amount, string eventId);
     event BudgetCommitmentReleased(string indexed region, uint256 amount, string eventId);
@@ -190,6 +200,11 @@ contract FloodPredictionContract is
     error KYCCheckFailed();
     error InvalidBeneficiaryCount();
     error OracleRiskScoreMismatch();
+    error TriggerListTooLarge();
+    error OracleNotConfigured();
+    error RolesNotDistinct();
+    error PaymentRecordMismatch();
+    error PaymentAlreadyDispatched();
 
     // ============================================
     // Initializer
@@ -214,6 +229,12 @@ contract FloodPredictionContract is
         address upgrader,
         address pauser
     ) public initializer {
+        if (admin == address(0) || operator == address(0) || upgrader == address(0) || pauser == address(0))
+            revert InvalidAddress();
+        if (admin == operator || admin == upgrader || admin == pauser ||
+            operator == upgrader || operator == pauser || upgrader == pauser)
+            revert RolesNotDistinct();
+
         __AccessControl_init();
         __Pausable_init();
 
@@ -267,16 +288,14 @@ contract FloodPredictionContract is
             revert CooldownNotElapsed();
         }
 
-        // validate riskScore against oracle consensus when multiOracle is configured.
-        // Only validate if consensus has been reached for this region (avoids blocking when oracle is initializing).
-        // H-03 fix: use ±oracleTolerance instead of strict equality to absorb TOCTOU slippage
-        // between the operator's consensus read and block inclusion.
-        if (multiOracle != address(0)) {
-            if (IMultiOracle(multiOracle).isConsensusReached(region)) {
-                uint256 oracleScore = IMultiOracle(multiOracle).getConsensusRiskScore(region);
-                uint256 diff = riskScore > oracleScore ? riskScore - oracleScore : oracleScore - riskScore;
-                if (diff > oracleTolerance) revert OracleRiskScoreMismatch();
-            }
+        // H-2 fix: MultiOracle must be configured — no trigger without oracle backing.
+        // Only validate score if consensus is reached (avoids blocking during oracle cold-start).
+        // H-03 fix: use ±oracleTolerance instead of strict equality to absorb TOCTOU slippage.
+        if (multiOracle == address(0)) revert OracleNotConfigured();
+        if (IMultiOracle(multiOracle).isConsensusReached(region)) {
+            uint256 oracleScore = IMultiOracle(multiOracle).getConsensusRiskScore(region);
+            uint256 diff = riskScore > oracleScore ? riskScore - oracleScore : oracleScore - riskScore;
+            if (diff > oracleTolerance) revert OracleRiskScoreMismatch();
         }
 
         // Check budget (H-01 fix: account for committed amounts)
@@ -668,10 +687,83 @@ contract FloodPredictionContract is
             trigger.region,
             filteredProviders
         ) {
+            // V-05 fix: mark each dispatched payment so retryMobileMoneyDispatch()
+            // cannot re-send a batch that already succeeded.
+            for (uint256 i = 0; i < filteredHashes.length; i++) {
+                mobileMoneyDispatched[keccak256(abi.encode(eventId, filteredHashes[i]))] = true;
+            }
             emit MobileMoneyPaymentsInitiated(eventId, validCount, totalBatch);
         } catch {
             emit MobileMoneyPaymentsFailed(eventId, validCount, totalBatch);
         }
+    }
+
+    /**
+     * @dev V-05 fix: retry dispatching to MobileMoneyProvider after a
+     * MobileMoneyPaymentsFailed event.
+     *
+     * Budget accounting and payment records are finalized inside
+     * _processAndInitiateMobileMoney() BEFORE the Mobile Money dispatch is
+     * attempted (by design — H-03 fix decouples on-chain settlement from the
+     * off-chain bridge). If that dispatch reverts (e.g. mobileMoneyProvider
+     * was misconfigured or temporarily failing), this function lets an
+     * operator re-attempt the SAME dispatch — without re-running Merkle/KYC
+     * checks or re-touching budget — once the provider is fixed.
+     *
+     * Each beneficiary must already have a finalized PaymentRecord for this
+     * eventId with a matching amount; this proves they were validated and
+     * paid out of the budget by processBatchPayment()/validateAndProcessPayments()
+     * and prevents this function being used to bypass those checks.
+     *
+     * One-shot per beneficiary: mobileMoneyDispatched[paymentKey] must be
+     * false (i.e. the original dispatch genuinely failed, or a prior retry
+     * for this beneficiary did) and is set true on success — preventing this
+     * function from being used to re-send an already-successful dispatch and
+     * cause duplicate off-chain Mobile Money payouts.
+     *
+     * Unlike the try/catch in _processAndInitiateMobileMoney, this call is
+     * NOT swallowed — it reverts on failure so the operator can see the
+     * underlying MobileMoneyProvider error.
+     */
+    function retryMobileMoneyDispatch(
+        string calldata eventId,
+        bytes32[] calldata beneficiaryHashes,
+        uint256[] calldata amounts,
+        bytes32[] calldata phoneHashes,
+        IMobileMoneyProvider.MobileProvider[] calldata providers
+    ) external onlyRole(OPERATOR_ROLE) whenNotPaused nonReentrant {
+        uint256 count = beneficiaryHashes.length;
+        if (count == 0 || count > MAX_BATCH_SIZE) revert InvalidBatchSize();
+        if (count != amounts.length || count != phoneHashes.length || count != providers.length) {
+            revert ArrayLengthMismatch();
+        }
+        if (mobileMoneyProvider == address(0)) revert InvalidAddress();
+
+        FloodTrigger storage trigger = triggers[eventId];
+        if (trigger.timestamp == 0) revert TriggerNotFound();
+
+        uint256 totalBatch;
+        for (uint256 i = 0; i < count; i++) {
+            bytes32 paymentKey = keccak256(abi.encode(eventId, beneficiaryHashes[i]));
+            PaymentRecord storage record = paymentRecords[paymentKey];
+            if (record.paidAt == 0 || record.amount != amounts[i]) revert PaymentRecordMismatch();
+            if (mobileMoneyDispatched[paymentKey]) revert PaymentAlreadyDispatched();
+            totalBatch += amounts[i];
+        }
+
+        IMobileMoneyProvider(mobileMoneyProvider).batchInitiatePayments(
+            beneficiaryHashes,
+            amounts,
+            phoneHashes,
+            trigger.region,
+            providers
+        );
+
+        for (uint256 i = 0; i < count; i++) {
+            mobileMoneyDispatched[keccak256(abi.encode(eventId, beneficiaryHashes[i]))] = true;
+        }
+
+        emit MobileMoneyDispatchRetried(eventId, count, totalBatch);
     }
 
     // ============================================
@@ -901,10 +993,11 @@ contract FloodPredictionContract is
     }
 
     /**
-     * @dev Get all trigger IDs
-     * @notice Deprecated: use getTriggerIdsPaginated() for production to avoid unbounded gas
+     * @dev Get all trigger IDs — capped at 500 entries.
+     * @notice For datasets > 500 triggers use getTriggerIdsPaginated() to avoid out-of-gas.
      */
     function getTriggerIds() external view returns (string[] memory) {
+        if (triggerIds.length > 500) revert TriggerListTooLarge();
         return triggerIds;
     }
 
@@ -993,10 +1086,12 @@ contract FloodPredictionContract is
 
     /**
      * @dev Reserved storage gap for future upgrades.
-     * Storage layout: oracleTolerance (1 slot) + __gap (48) = 49 reserved slots total.
-     * Note: committedBudget and triggerSpentAmount are mappings and occupy keccak256-based
-     * storage slots, not numbered slots in the gap calculation.
+     * Storage layout: oracleTolerance (1 slot) + __gap (47) = 48 reserved slots total.
+     * Note: committedBudget, triggerSpentAmount, and mobileMoneyDispatched are mappings
+     * and occupy keccak256-based storage slots, not numbered slots in the gap calculation.
+     * V-05 fix: mobileMoneyDispatched mapping added, __gap reduced from 48 to 47 to
+     * preserve the total reserved slot count.
      * When adding new state variables, reduce __gap size accordingly.
      */
-    uint256[48] private __gap;
+    uint256[47] private __gap;
 }

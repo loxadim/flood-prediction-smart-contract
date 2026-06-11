@@ -310,7 +310,7 @@ Orchestrateur central du systeme OPAL. Recoit les scores de risque valides par l
 | `VERSION` | 3 | Version du contrat |
 | `MAX_BATCH_SIZE` | 50 | Nombre maximum de beneficiaires par lot |
 | `DEFAULT_RISK_THRESHOLD` | 70 | Seuil de risque standard (%) |
-| `GOVERNANCE_RISK_THRESHOLD` | 85 | Seuil pour override de gouvernance (%) |
+| `GOVERNANCE_RISK_THRESHOLD` | 85 | Constante historique exposee; le chemin override est admin-only et ne l'applique pas directement |
 | `MAX_RISK_SCORE` | 100 | Score de risque maximum |
 | `MIN_PAYMENT_AMOUNT` | 500 | Montant minimum par paiement (FCFA) |
 | `MAX_PAYMENT_AMOUNT` | 5 000 000 | Montant maximum par paiement (FCFA) |
@@ -479,7 +479,8 @@ function validateAndProcessPayments(
     bytes32[] calldata beneficiaryHashes,
     uint256[] calldata amounts,
     bytes32[][] calldata merkleProofs,
-    bytes32[] calldata phoneHashes
+    bytes32[] calldata phoneHashes,
+    IMobileMoneyProvider.MobileProvider[] calldata providers
 ) external onlyRole(OPERATOR_ROLE) whenNotPaused nonReentrant
 ```
 
@@ -2196,9 +2197,35 @@ const envOrVar = (name) => process.env[name] ? process.env[name] : configVariabl
 | KYC/AML (4-eyes, suspension, reinstatement) | ✓ |
 | Mobile Money (retry, batch, providers) | ✓ |
 | Correctifs securite (35+) | ✓ |
-| Tests de charge (1K-5K beneficiaires) | ✓ |
+| Tests de charge (1K-10K beneficiaires) | ✓ |
 
-### 28.3 Execution
+### 28.3 Tests de charge 1K–10K
+
+Les tests de charge ont ete verifies avec succes jusqu'a 10 000 beneficiaires dans le jeu de tests de la suite.
+
+- `test/BatchBeneficiaries1000.test.js` : 1 000 beneficiaires
+- `test/BatchBeneficiaries2000.test.js` : 2 000 beneficiaires
+- `test/BatchBeneficiaries3000.test.js` : 3 000 beneficiaires
+- `test/BatchBeneficiaries5000.test.js` : 5 000 beneficiaires
+- `test/BatchBeneficiaries10000.test.js` : 10 000 beneficiaires
+
+#### Resultats et mesures de gaz
+
+| Nombre de beneficiaires | Batches | Gas total | Gas moyen / batch | Gas moyen / beneficiaire |
+|-------------------------|---------|-----------|-------------------|--------------------------|
+| 2 000 | 40 | 623 044 300 | 15 576 107 | 311 522 |
+| 3 000 | 60 | 936 452 760 | 15 607 546 | 312 151 |
+| 5 000 | 100 | 1 783 937 678 | 17 839 376 | 356 787 |
+| 10 000 | 200 | 3 577 521 684 | 17 887 608 | 357 752 |
+
+#### Observations clefs
+
+- Le traitement batch de 50 beneficiaires est stable jusqu'a 10 000 beneficiaires.
+- Le cout par beneficiaire reste relativement stable autour de 312k gas jusqu'a 3 000 beneficiaires, puis monte a ~357k gas pour 5 000 et 10 000.
+- La prevention de double-paiement fonctionne correctement sur toute l'echelle testee.
+- Le test initiale de role `RolesNotDistinct()` a ete corrige en attribuant 4 signataires distincts lors de l'initialisation de `FloodPredictionContract`.
+
+### 28.4 Execution
 
 ```bash
 # Suite complete
