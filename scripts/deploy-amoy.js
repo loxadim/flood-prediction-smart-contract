@@ -109,12 +109,42 @@ async function verifyContract(address, constructorArguments = []) {
 // ========================================
 logSection("OPAL Platform — Polygon Amoy Deployment");
 
-const [deployer] = await ethers.getSigners();
+const [deployer, ...otherSigners] = await ethers.getSigners();
 const balance = await ethers.provider.getBalance(deployer.address);
 
+// V-06 fix: resolve OPERATOR/UPGRADER/PAUSER to addresses distinct from the
+// deployer (ADMIN). Reusing deployer.address for every role collapses RBAC
+// separation-of-duties — one compromised key would hold all privileges.
+// On local networks fall back to additional Hardhat signers; on any other
+// network these env vars are required.
+const isLocalNetwork = networkName === "hardhat" || networkName === "localhost";
+
+function resolveRoleAddress(envVar, fallbackSigner, roleName) {
+    const envAddr = process.env[envVar];
+    if (envAddr) {
+        if (!ethers.isAddress(envAddr)) {
+            throw new Error(`${envVar}="${envAddr}" is not a valid address`);
+        }
+        return envAddr;
+    }
+    if (isLocalNetwork && fallbackSigner) {
+        return fallbackSigner.address;
+    }
+    throw new Error(
+        `${envVar} must be set to a distinct address for ${roleName} on network "${networkName}" (chainId ${networkChainId})`
+    );
+}
+
+const operatorAddress = resolveRoleAddress("OPERATOR_ADDRESS", otherSigners[0], "OPERATOR_ROLE");
+const upgraderAddress = resolveRoleAddress("UPGRADER_ADDRESS", otherSigners[1], "UPGRADER_ROLE");
+const pauserAddress = resolveRoleAddress("PAUSER_ADDRESS", otherSigners[2], "PAUSER_ROLE");
+
 console.log(`\n  Network:  ${networkName} (chainId: ${networkChainId})`);
-console.log(`  Deployer: ${deployer.address}`);
+console.log(`  Deployer: ${deployer.address} (ADMIN)`);
 console.log(`  Balance:  ${ethers.formatEther(balance)} MATIC`);
+console.log(`  OPERATOR_ROLE: ${operatorAddress}`);
+console.log(`  UPGRADER_ROLE: ${upgraderAddress}`);
+console.log(`  PAUSER_ROLE:   ${pauserAddress}`);
 
     if (balance < ethers.parseEther("0.01")) {
         console.error("\n  ❌ Insufficient balance. Need MATIC for deployment.");
@@ -157,6 +187,18 @@ console.log(`  Balance:  ${ethers.formatEther(balance)} MATIC`);
     const mobileMoney = await deployOrReuse(4, 8, "MobileMoneyProvider", "MobileMoneyProvider");
     const kyc         = await deployOrReuse(6, 8, "KYCAMLCompliance", "KYCAMLCompliance");
 
+    // L-2 fix: lock WASDI oracle to production mode so simulation functions are disabled.
+    if (!deployed.wasdiProductionLocked) {
+        logStep("🔒", "Locking WASDIOracleConnector to production mode...");
+        const lockTx = await wasdiOracle.lockProductionMode();
+        await lockTx.wait();
+        deployed.wasdiProductionLocked = true;
+        saveProgress(progress);
+        logStep("✅", "WASDIOracleConnector locked — simulateHighRisk/simulateLowRisk disabled");
+    } else {
+        logStep("⏭️", "WASDIOracleConnector already locked to production mode — skipping");
+    }
+
     // ---- Step 7: OpalGovernance (UUPS Proxy) ----
     logSection("Step 7/8: OpalGovernanceUpgradeable (UUPS Proxy)");
     let opalGov;
@@ -188,7 +230,7 @@ console.log(`  Balance:  ${ethers.formatEther(balance)} MATIC`);
         const FloodPred = await ethers.getContractFactory("FloodPredictionContract");
         floodPred = await ozUpgrades.deployProxy(
             FloodPred,
-            [deployer.address, deployer.address, deployer.address, deployer.address],
+            [deployer.address, operatorAddress, upgraderAddress, pauserAddress],
             { kind: "uups" }
         );
         await floodPred.waitForDeployment();
@@ -222,22 +264,41 @@ console.log(`  Balance:  ${ethers.formatEther(balance)} MATIC`);
         logStep("⏭️", "Contract addresses already wired — skipping");
     }
 
-    // Grant roles
-    if (!steps.rolesGranted) {
-        logStep("🔧", "Granting OPERATOR_ROLE to deployer...");
-        const OPERATOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("OPERATOR_ROLE"));
-        const tx1 = await floodPred.grantRole(OPERATOR_ROLE, deployer.address);
+    // V-07 fix: authorize FloodPrediction as an MMP relayer, then revoke the
+    // deployer's relayer privileges (granted to msg.sender in MMP's constructor).
+    if (!steps.relayerConfigured) {
+        logStep("🔧", "Configuring MobileMoneyProvider relayers...");
+        const tx1 = await mobileMoney.addRelayer(deployed.FloodPredictionProxy);
         await tx1.wait();
+        logStep("  ✅", "FloodPrediction authorized as MMP relayer");
 
-        logStep("🔧", "Granting PAUSER_ROLE to deployer...");
-        const PAUSER_ROLE = ethers.keccak256(ethers.toUtf8Bytes("PAUSER_ROLE"));
-        const tx2 = await floodPred.grantRole(PAUSER_ROLE, deployer.address);
+        const tx2 = await mobileMoney.removeRelayer(deployer.address);
         await tx2.wait();
-        steps.rolesGranted = true;
+        logStep("  ✅", "Deployer relayer privileges revoked");
+
+        steps.relayerConfigured = true;
         saveProgress(progress);
-        logStep("✅", "Roles granted");
     } else {
-        logStep("⏭️", "Roles already granted — skipping");
+        logStep("⏭️", "MMP relayers already configured — skipping");
+    }
+
+    // Authorize FloodPrediction to call JokalanteTargeting and KYCAMLCompliance
+    // (mirrors deploy-upgradeable.js) — without this, processBatchPayment
+    // reverts because FloodPrediction cannot read targeting/compliance state.
+    if (!steps.complianceAuthorized) {
+        logStep("🔧", "Authorizing FloodPrediction on JokalanteTargeting and KYCAMLCompliance...");
+        const tx1 = await jokalante.addAuthorizedCaller(deployed.FloodPredictionProxy);
+        await tx1.wait();
+        logStep("  ✅", "FloodPrediction authorized as caller on JokalanteTargeting");
+
+        const tx2 = await kyc.authorizeContract(deployed.FloodPredictionProxy);
+        await tx2.wait();
+        logStep("  ✅", "FloodPrediction authorized as caller on KYCAMLCompliance");
+
+        steps.complianceAuthorized = true;
+        saveProgress(progress);
+    } else {
+        logStep("⏭️", "JokalanteTargeting/KYCAMLCompliance authorization already configured — skipping");
     }
 
     // Configure budgets for regions
@@ -267,16 +328,50 @@ console.log(`  Balance:  ${ethers.formatEther(balance)} MATIC`);
         await tx1.wait();
         logStep("  🔗", "FloodPrediction contract set on OpalGovernance");
 
-        // Whitelist selectors for governance proposals
-        const selectors = [
+        // H12-GOV fix: emergency-response selectors go through the disjoint
+        // emergencyAllowedSelectors whitelist (immediate execution on quorum,
+        // bypassing the EXECUTION_DELAY review window).
+        const emergencySelectors = [
             floodPred.interface.getFunction("createGovernanceOverrideTrigger").selector,
             floodPred.interface.getFunction("pause").selector,
             floodPred.interface.getFunction("unpause").selector,
+            floodPred.interface.getFunction("activateEmergencyMode").selector,
+            floodPred.interface.getFunction("deactivateEmergencyMode").selector,
+            floodPred.interface.getFunction("setRegionEmergency").selector,
         ];
-        const allowed = selectors.map(() => true);
-        const tx2 = await opalGov.setAllowedSelectorBatch(selectors, allowed);
+        const tx2 = await opalGov.setEmergencyAllowedSelectorBatch(
+            emergencySelectors,
+            emergencySelectors.map(() => true)
+        );
         await tx2.wait();
-        logStep("  ✅", `${selectors.length} selectors whitelisted on governance`);
+        logStep("  ✅", `${emergencySelectors.length} emergency selectors whitelisted on governance`);
+
+        // Parameter-tuning selectors for PARAMETER_CHANGE/ORACLE_OVERRIDE
+        // proposals — these go through the 24h deadline + 1h EXECUTION_DELAY.
+        const paramSelectors = [
+            floodPred.interface.getFunction("updateRiskThreshold").selector,
+            multiOracle.interface.getFunction("setConsensusThreshold").selector,
+            multiOracle.interface.getFunction("setDataFreshnessThreshold").selector,
+            multiOracle.interface.getFunction("setMaxConsecutiveOutliers").selector,
+        ];
+        const tx3 = await opalGov.setAllowedSelectorBatch(
+            paramSelectors,
+            paramSelectors.map(() => true)
+        );
+        await tx3.wait();
+        logStep("  ✅", `${paramSelectors.length} parameter selectors whitelisted on governance`);
+
+        // V-04 fix: paramSelectors above includes MultiOracle selectors, so
+        // MultiOracle must be whitelisted as a proposal target too.
+        const tx4 = await opalGov.setAllowedTarget(deployed.MultiOracle, true);
+        await tx4.wait();
+        logStep("  ✅", "MultiOracle whitelisted as governance proposal target");
+
+        // Wire MultiOracle to governance so the onlyOwnerOrGovernance setters
+        // above can be called via governance proposals.
+        const tx5 = await multiOracle.setGovernance(deployed.OpalGovernanceProxy);
+        await tx5.wait();
+        logStep("  ✅", "MultiOracle governance set to OpalGovernance");
 
         steps.governanceConfigured = true;
         saveProgress(progress);
@@ -323,6 +418,12 @@ console.log(`  Balance:  ${ethers.formatEther(balance)} MATIC`);
         network: networkName,
         chainId: networkChainId,
         deployer: deployer.address,
+        roles: {
+            admin: deployer.address,
+            operator: operatorAddress,
+            upgrader: upgraderAddress,
+            pauser: pauserAddress,
+        },
         timestamp: new Date().toISOString(),
         duration: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
         contracts: deployed,

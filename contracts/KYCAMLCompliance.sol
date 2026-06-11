@@ -183,9 +183,14 @@ contract KYCAMLCompliance is IKYCAMLCompliance, Ownable2Step {
         
         ComplianceAttestation storage existing = attestations[beneficiaryHash];
         // Allow re-submission if previous was rejected or expired
-        if (existing.status == VerificationStatus.VERIFIED || 
+        if (existing.status == VerificationStatus.VERIFIED ||
             existing.status == VerificationStatus.PENDING) {
             revert AttestationAlreadyExists();
+        }
+        // A SUSPENDED beneficiary must go through reinstateBeneficiary(), not
+        // a fresh attestation that would silently reset their status to PENDING.
+        if (existing.status == VerificationStatus.SUSPENDED) {
+            revert BeneficiaryAlreadySuspended();
         }
         
         attestations[beneficiaryHash] = ComplianceAttestation({

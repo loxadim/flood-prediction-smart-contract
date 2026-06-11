@@ -76,10 +76,26 @@ contract OpalGovernanceUpgradeable is
     // V-03 fix: track upgrade implementations approved via governance proposal
     mapping(address => bool) public approvedUpgrades;
 
+    // V-04 fix: whitelist of contract addresses that proposals may call.
+    // executeProposal() previously only checked the function selector, allowing
+    // proposal.target to point at any attacker-controlled contract exposing a
+    // colliding selector.
+    mapping(address => bool) public allowedTargets;
+
+    // H12-GOV fix: dedicated whitelist of selectors that EMERGENCY_TRIGGER
+    // proposals may execute, separate from allowedSelectors (used by
+    // PARAMETER_CHANGE/BUDGET_ALLOCATION/UPGRADE/ORACLE_OVERRIDE proposals).
+    // Without this split, any whitelisted selector could be executed
+    // immediately by self-labeling a proposal EMERGENCY_TRIGGER, bypassing
+    // the EXECUTION_DELAY owner-veto window added by the M-10 fix.
+    mapping(bytes4 => bool) public emergencyAllowedSelectors;
+
     // ============================================
     // Events (M-10 fix)
     // ============================================
     event SelectorWhitelisted(bytes4 indexed selector, bool allowed);
+    event TargetWhitelisted(address indexed target, bool allowed);
+    event EmergencySelectorWhitelisted(bytes4 indexed selector, bool allowed);
 
     // ============================================
     // Errors
@@ -97,6 +113,7 @@ contract OpalGovernanceUpgradeable is
     error InvalidQuorum();
     error CannotRemoveBelowQuorum();
     error SelectorNotWhitelisted();
+    error TargetNotWhitelisted();
     error ExecutionFailed();
     error TimelockNotElapsed();
     error ProposalNotExpired();
@@ -152,6 +169,16 @@ contract OpalGovernanceUpgradeable is
         activeActorCount = 1;
 
         emit GovernanceActorAdded(initialOwner, "Admin", "ADMIN");
+
+        // H13-GOV fix: whitelist this contract as an allowed proposal target
+        // and approveUpgrade() as an allowed selector, so UPGRADE proposals
+        // (a self-call to approveUpgrade via executeProposal) can execute.
+        // Without this, the only sanctioned UUPS upgrade path (V-03 fix) is
+        // unreachable — executeProposal always reverts with TargetNotWhitelisted.
+        allowedTargets[address(this)] = true;
+        allowedSelectors[this.approveUpgrade.selector] = true;
+        emit TargetWhitelisted(address(this), true);
+        emit SelectorWhitelisted(this.approveUpgrade.selector, true);
     }
 
     /// @dev V-03 fix: Authorization requires both ownership AND governance approval.
@@ -337,10 +364,39 @@ contract OpalGovernanceUpgradeable is
         if (block.timestamp > proposal.deadline) revert ProposalIsExpired();
         if (proposal.signatureCount < proposal.requiredSignatures) revert InsufficientSignatures();
 
-        // H11-GOV fix: enforce timelock only for non-emergency proposals.
-        // EMERGENCY_TRIGGER has a 4h deadline — a 1h timelock could create a race condition
-        // if quorum is reached late, blocking execution before the deadline.
-        if (proposal.proposalType != ProposalType.EMERGENCY_TRIGGER) {
+        // H-02 fix: resolve the execution target.
+        // Use proposal.target when explicitly set; fall back to floodPredictionContract.
+        address executionTarget = proposal.target != address(0) ? proposal.target : floodPredictionContract;
+        bool hasCall = proposal.data.length > 0 && executionTarget != address(0);
+        bool isEmergency = proposal.proposalType == ProposalType.EMERGENCY_TRIGGER;
+
+        if (hasCall) {
+            // V-04 fix: the target contract itself must be explicitly whitelisted —
+            // the selector whitelist alone does not stop a colliding selector on an
+            // attacker-controlled contract.
+            if (!allowedTargets[executionTarget]) revert TargetNotWhitelisted();
+            // M-3 fix: enforce selector whitelist — data shorter than 4 bytes is always rejected.
+            if (proposal.data.length < 4) revert SelectorNotWhitelisted();
+            bytes4 selector = bytes4(proposal.data);
+
+            // H12-GOV fix: EMERGENCY_TRIGGER proposals may only call selectors from
+            // emergencyAllowedSelectors, a whitelist disjoint from the general
+            // allowedSelectors used by all other proposal types. This stops a
+            // proposer from self-labeling a routine parameter change (e.g.
+            // setConsensusThreshold) as "emergency" purely to skip EXECUTION_DELAY.
+            if (isEmergency) {
+                if (!emergencyAllowedSelectors[selector]) revert SelectorNotWhitelisted();
+            } else {
+                if (!allowedSelectors[selector]) revert SelectorNotWhitelisted();
+            }
+        }
+
+        // H11-GOV fix: enforce timelock for non-emergency proposals.
+        // H12-GOV fix: the exemption now strictly tracks isEmergency, which (for
+        // calls) requires the selector to be in emergencyAllowedSelectors — verified
+        // above. EMERGENCY_TRIGGER has a 4h deadline — a 1h timelock could create a
+        // race condition if quorum is reached late, blocking execution before the deadline.
+        if (!isEmergency) {
             uint256 qReached = quorumReachedAt[proposalId];
             if (qReached == 0) revert InsufficientSignatures();
             if (block.timestamp < qReached + EXECUTION_DELAY) revert TimelockNotElapsed();
@@ -350,17 +406,8 @@ contract OpalGovernanceUpgradeable is
         proposal.executedAt = block.timestamp;
         executedProposalCount++;
 
-        // H-02 fix: resolve the execution target.
-        // Use proposal.target when explicitly set; fall back to floodPredictionContract.
-        address executionTarget = proposal.target != address(0) ? proposal.target : floodPredictionContract;
-
         // Execute the encoded function call if data is provided and target is set
-        if (proposal.data.length > 0 && executionTarget != address(0)) {
-            // Selector whitelist check (best practice — C-01 fix)
-            if (proposal.data.length >= 4) {
-                bytes4 selector = bytes4(proposal.data);
-                if (!allowedSelectors[selector]) revert SelectorNotWhitelisted();
-            }
+        if (hasCall) {
             (bool success, bytes memory returnData) = executionTarget.call{gas: executionGasLimit}(proposal.data);
             if (!success) {
                 if (returnData.length > 0) {
@@ -427,7 +474,16 @@ contract OpalGovernanceUpgradeable is
         if (_contract == address(0)) revert InvalidAddress();
         // M-08 fix: validate contract has code
         if (_contract.code.length == 0) revert InvalidAddress();
+
+        // V-04 fix: keep the execution target whitelist in sync with the
+        // default fallback target (proposal.target == address(0)).
+        if (floodPredictionContract != address(0)) {
+            allowedTargets[floodPredictionContract] = false;
+            emit TargetWhitelisted(floodPredictionContract, false);
+        }
         floodPredictionContract = _contract;
+        allowedTargets[_contract] = true;
+        emit TargetWhitelisted(_contract, true);
     }
 
     /**
@@ -441,6 +497,19 @@ contract OpalGovernanceUpgradeable is
     }
 
     /**
+     * @dev Add or remove a contract address from the proposal execution target
+     * whitelist (V-04 fix). A proposal's `target` (when non-zero) must be
+     * whitelisted here before executeProposal() will call into it.
+     * @param target Contract address
+     * @param allowed Whether proposals may call this target
+     */
+    function setAllowedTarget(address target, bool allowed) external onlyOwner {
+        if (target == address(0)) revert InvalidAddress();
+        allowedTargets[target] = allowed;
+        emit TargetWhitelisted(target, allowed);
+    }
+
+    /**
      * @dev Batch set allowed selectors
      * @param selectors Array of 4-byte function selectors
      * @param allowed Array of booleans
@@ -450,6 +519,33 @@ contract OpalGovernanceUpgradeable is
         for (uint256 i = 0; i < selectors.length; i++) {
             allowedSelectors[selectors[i]] = allowed[i];
             emit SelectorWhitelisted(selectors[i], allowed[i]);
+        }
+    }
+
+    /**
+     * @dev Add or remove a function selector from the EMERGENCY_TRIGGER whitelist
+     * (H12-GOV fix). Only selectors here can be executed by an EMERGENCY_TRIGGER
+     * proposal, and doing so skips the EXECUTION_DELAY timelock — so this should
+     * be limited to genuine emergency-response functions (pause, emergency mode,
+     * region emergency flags, governance override triggers).
+     * @param selector The 4-byte function selector
+     * @param allowed Whether the selector is allowed for EMERGENCY_TRIGGER proposals
+     */
+    function setEmergencyAllowedSelector(bytes4 selector, bool allowed) external onlyOwner {
+        emergencyAllowedSelectors[selector] = allowed;
+        emit EmergencySelectorWhitelisted(selector, allowed);
+    }
+
+    /**
+     * @dev Batch set EMERGENCY_TRIGGER-allowed selectors (H12-GOV fix)
+     * @param selectors Array of 4-byte function selectors
+     * @param allowed Array of booleans
+     */
+    function setEmergencyAllowedSelectorBatch(bytes4[] calldata selectors, bool[] calldata allowed) external onlyOwner {
+        if (selectors.length != allowed.length) revert ArrayLengthMismatch();
+        for (uint256 i = 0; i < selectors.length; i++) {
+            emergencyAllowedSelectors[selectors[i]] = allowed[i];
+            emit EmergencySelectorWhitelisted(selectors[i], allowed[i]);
         }
     }
 
@@ -507,10 +603,9 @@ contract OpalGovernanceUpgradeable is
 
     /**
      * @dev Reserved storage gap for future upgrades.
-     * Storage layout: state_variables_count (1: executionGasLimit) + __gap (47) = 48 slots.
-     * Note: quorumReachedAt, proposalRejectionCount, proposalRejections, proposalSignatures
-     * are mappings and occupy keccak256-based storage slots, not numbered slots.
+     * V-04 fix: allowedTargets mapping added, __gap reduced from 47 to 46.
+     * H12-GOV fix: emergencyAllowedSelectors mapping added, __gap reduced from 46 to 45.
      * When adding new state variables, reduce __gap size accordingly.
      */
-    uint256[47] private __gap;
+    uint256[45] private __gap;
 }

@@ -212,6 +212,16 @@ describe("KYCAMLCompliance", function () {
                 kyc.connect(unauthorized).submitAttestation(BEN_HASH, ID_HASH, DOC_HASH, REGION)
             ).to.be.revertedWithCustomError(kyc, "NotComplianceOfficer");
         });
+
+        it("should revert re-submission for a SUSPENDED beneficiary", async function () {
+            await kyc.connect(officer1).submitAttestation(BEN_HASH, ID_HASH, DOC_HASH, REGION);
+            await kyc.connect(officer2).approveAttestation(BEN_HASH, 0, 0); // VERIFIED
+            await kyc.connect(officer1).suspendBeneficiary(BEN_HASH, "Suspicious activity");
+
+            await expect(
+                kyc.connect(officer1).submitAttestation(BEN_HASH, ID_HASH, DOC_HASH, REGION)
+            ).to.be.revertedWithCustomError(kyc, "BeneficiaryAlreadySuspended");
+        });
     });
 
     // =========================================================================

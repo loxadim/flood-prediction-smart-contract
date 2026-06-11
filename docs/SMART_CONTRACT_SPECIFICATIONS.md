@@ -169,9 +169,9 @@ The platform comprises **7 main contracts**, **1 library**, **7 interfaces**, an
 | `createFloodTrigger(region, riskScore, merkleRoot, totalAmount, beneficiaryCount)` | external | OPERATOR_ROLE, whenNotPaused | Create a flood trigger |
 | `createGovernanceOverrideTrigger(region, riskScore, merkleRoot, totalAmount, beneficiaryCount, reason)` | external | ADMIN_ROLE, whenNotPaused | Create governance override trigger (GOVERNANCE_RISK_THRESHOLD=85 defined but not enforced in code) |
 | `validateTrigger(eventId)` | external | OPERATOR_ROLE | Set trigger to VALIDATED |
-| `validateAndProcessPayments(eventId, hashes, amounts, proofs, phoneHashes)` | external | OPERATOR_ROLE, nonReentrant, whenNotPaused | One-step validate + batch pay |
+| `validateAndProcessPayments(eventId, hashes, amounts, proofs, phoneHashes, providers)` | external | OPERATOR_ROLE, nonReentrant, whenNotPaused | One-step validate + batch pay |
 | `cancelTrigger(eventId, reason)` | external | ADMIN_ROLE | Cancel an ACTIVE trigger |
-| `processBatchPayment(eventId, hashes, amounts, proofs, phoneHashes)` | external | OPERATOR_ROLE, nonReentrant, whenNotPaused | Pay batch of validated trigger |
+| `processBatchPayment(eventId, hashes, amounts, proofs, phoneHashes, providers)` | external | OPERATOR_ROLE, nonReentrant, whenNotPaused | Pay batch of validated trigger |
 | `allocateBudget(region, amount)` | external | ADMIN_ROLE | Allocate budget to region |
 | `deactivateBudget(region)` | external | ADMIN_ROLE | Deactivate region budget |
 | `activateEmergencyMode(reason)` | external | ADMIN_ROLE | Activate global emergency |

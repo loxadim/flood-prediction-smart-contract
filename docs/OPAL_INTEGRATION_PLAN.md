@@ -172,8 +172,8 @@ sequenceDiagram
     participant REL as Relayer
     participant OM as Orange Money API
     
-    OPAL->>FPC: processBatchPayment(eventId, hashes, amounts, proofs, phoneHashes)
-    FPC->>MMP: batchInitiatePayments(hashes, amounts, phoneHashes, region)
+    OPAL->>FPC: processBatchPayment(eventId, hashes, amounts, proofs, phoneHashes, providers)
+    FPC->>MMP: batchInitiatePayments(hashes, amounts, phoneHashes, region, providers)
     MMP-->>FPC: paymentIds[]
     MMP-->>OPAL: PaymentInitiated events (×50)
     

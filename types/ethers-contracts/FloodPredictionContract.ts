@@ -26,9 +26,9 @@ export declare namespace FloodPredictionContract {
     }
 
   export interface FloodPredictionContractInterface extends Interface {
-    getFunction(nameOrSignature: "ADMIN_ROLE" | "COOLDOWN_CRITICAL" | "COOLDOWN_HIGH" | "COOLDOWN_NORMAL" | "DEFAULT_ADMIN_ROLE" | "DEFAULT_RISK_THRESHOLD" | "GOVERNANCE_RISK_THRESHOLD" | "MAX_BATCH_SIZE" | "MAX_PAYMENT_AMOUNT" | "MAX_REGION_LENGTH" | "MAX_RISK_SCORE" | "MAX_STRING_LENGTH" | "MIN_PAYMENT_AMOUNT" | "OPERATOR_ROLE" | "PAUSER_ROLE" | "UPGRADER_ROLE" | "UPGRADE_INTERFACE_VERSION" | "VERSION" | "activateEmergencyMode" | "allocateBudget" | "budgetRegions" | "budgets" | "cancelTrigger" | "committedBudget" | "createFloodTrigger" | "createGovernanceOverrideTrigger" | "deactivateBudget" | "deactivateEmergencyMode" | "emergencyMode" | "getBudgetRegionsPaginated" | "getCooldownRemaining" | "getFloodTrigger" | "getPaymentRecord" | "getRegionBudget" | "getRegionBudgetRemaining" | "getRoleAdmin" | "getSystemStats" | "getTriggerIds" | "getTriggerIdsPaginated" | "getVersion" | "globalNonce" | "governance" | "grantRole" | "hasRole" | "initialize" | "isBeneficiaryPaid" | "jokalanteTargeting" | "kycCompliance" | "lastTriggerTimestamp" | "mobileMoneyProvider" | "multiOracle" | "oracleTolerance" | "pause" | "paused" | "paymentRecords" | "processBatchPayment" | "proxiableUUID" | "regionEmergency" | "regionNonces" | "renounceRole" | "revokeRole" | "riskThreshold" | "setContractAddresses" | "setOracleTolerance" | "setRegionEmergency" | "supportsInterface" | "totalAmountDisbursed" | "totalBudgetAllocated" | "totalBudgetSpent" | "totalPaymentsProcessed" | "triggerCount" | "triggerIds" | "triggerPaidCount" | "triggerSpentAmount" | "triggers" | "unpause" | "updateRiskThreshold" | "upgradeToAndCall" | "validateAndProcessPayments" | "validateTrigger"): FunctionFragment;
+    getFunction(nameOrSignature: "ADMIN_ROLE" | "COOLDOWN_CRITICAL" | "COOLDOWN_HIGH" | "COOLDOWN_NORMAL" | "DEFAULT_ADMIN_ROLE" | "DEFAULT_RISK_THRESHOLD" | "GOVERNANCE_RISK_THRESHOLD" | "MAX_BATCH_SIZE" | "MAX_PAYMENT_AMOUNT" | "MAX_REGION_LENGTH" | "MAX_RISK_SCORE" | "MAX_STRING_LENGTH" | "MIN_PAYMENT_AMOUNT" | "OPERATOR_ROLE" | "PAUSER_ROLE" | "UPGRADER_ROLE" | "UPGRADE_INTERFACE_VERSION" | "VERSION" | "activateEmergencyMode" | "allocateBudget" | "budgetRegions" | "budgets" | "cancelTrigger" | "committedBudget" | "createFloodTrigger" | "createGovernanceOverrideTrigger" | "deactivateBudget" | "deactivateEmergencyMode" | "emergencyMode" | "getBudgetRegionsPaginated" | "getCooldownRemaining" | "getFloodTrigger" | "getPaymentRecord" | "getRegionBudget" | "getRegionBudgetRemaining" | "getRoleAdmin" | "getSystemStats" | "getTriggerIds" | "getTriggerIdsPaginated" | "getVersion" | "globalNonce" | "governance" | "grantRole" | "hasRole" | "initialize" | "isBeneficiaryPaid" | "jokalanteTargeting" | "kycCompliance" | "lastTriggerTimestamp" | "mobileMoneyDispatched" | "mobileMoneyProvider" | "multiOracle" | "oracleTolerance" | "pause" | "paused" | "paymentRecords" | "processBatchPayment" | "proxiableUUID" | "regionEmergency" | "regionNonces" | "renounceRole" | "retryMobileMoneyDispatch" | "revokeRole" | "riskThreshold" | "setContractAddresses" | "setOracleTolerance" | "setRegionEmergency" | "supportsInterface" | "totalAmountDisbursed" | "totalBudgetAllocated" | "totalBudgetSpent" | "totalPaymentsProcessed" | "triggerCount" | "triggerIds" | "triggerPaidCount" | "triggerSpentAmount" | "triggers" | "unpause" | "updateRiskThreshold" | "upgradeToAndCall" | "validateAndProcessPayments" | "validateTrigger"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "BatchPaymentProcessed" | "BudgetAllocated" | "BudgetCommitmentReleased" | "BudgetCommitted" | "BudgetDeactivated" | "BudgetSpent" | "ContractAddressUpdated" | "EmergencyModeActivated" | "EmergencyModeDeactivated" | "FloodTriggerCreated" | "GovernanceOverride" | "Initialized" | "KYCBeneficiarySkipped" | "MobileMoneyPaymentsFailed" | "MobileMoneyPaymentsInitiated" | "OracleToleranceUpdated" | "Paused" | "RegionEmergencySet" | "RiskThresholdUpdated" | "RoleAdminChanged" | "RoleGranted" | "RoleRevoked" | "SinglePaymentProcessed" | "TriggerCancelled" | "TriggerValidated" | "Unpaused" | "Upgraded"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "BatchPaymentProcessed" | "BudgetAllocated" | "BudgetCommitmentReleased" | "BudgetCommitted" | "BudgetDeactivated" | "BudgetSpent" | "ContractAddressUpdated" | "EmergencyModeActivated" | "EmergencyModeDeactivated" | "FloodTriggerCreated" | "GovernanceOverride" | "Initialized" | "KYCBeneficiarySkipped" | "MobileMoneyDispatchRetried" | "MobileMoneyPaymentsFailed" | "MobileMoneyPaymentsInitiated" | "OracleToleranceUpdated" | "Paused" | "RegionEmergencySet" | "RiskThresholdUpdated" | "RoleAdminChanged" | "RoleGranted" | "RoleRevoked" | "SinglePaymentProcessed" | "TriggerCancelled" | "TriggerValidated" | "Unpaused" | "Upgraded"): EventFragment;
 
     encodeFunctionData(functionFragment: 'ADMIN_ROLE', values?: undefined): string;
 encodeFunctionData(functionFragment: 'COOLDOWN_CRITICAL', values?: undefined): string;
@@ -79,6 +79,7 @@ encodeFunctionData(functionFragment: 'isBeneficiaryPaid', values: [string, Bytes
 encodeFunctionData(functionFragment: 'jokalanteTargeting', values?: undefined): string;
 encodeFunctionData(functionFragment: 'kycCompliance', values?: undefined): string;
 encodeFunctionData(functionFragment: 'lastTriggerTimestamp', values: [string]): string;
+encodeFunctionData(functionFragment: 'mobileMoneyDispatched', values: [BytesLike]): string;
 encodeFunctionData(functionFragment: 'mobileMoneyProvider', values?: undefined): string;
 encodeFunctionData(functionFragment: 'multiOracle', values?: undefined): string;
 encodeFunctionData(functionFragment: 'oracleTolerance', values?: undefined): string;
@@ -90,6 +91,7 @@ encodeFunctionData(functionFragment: 'proxiableUUID', values?: undefined): strin
 encodeFunctionData(functionFragment: 'regionEmergency', values: [string]): string;
 encodeFunctionData(functionFragment: 'regionNonces', values: [string]): string;
 encodeFunctionData(functionFragment: 'renounceRole', values: [BytesLike, AddressLike]): string;
+encodeFunctionData(functionFragment: 'retryMobileMoneyDispatch', values: [string, BytesLike[], BigNumberish[], BytesLike[], BigNumberish[]]): string;
 encodeFunctionData(functionFragment: 'revokeRole', values: [BytesLike, AddressLike]): string;
 encodeFunctionData(functionFragment: 'riskThreshold', values?: undefined): string;
 encodeFunctionData(functionFragment: 'setContractAddresses', values: [AddressLike, AddressLike, AddressLike, AddressLike, AddressLike]): string;
@@ -160,6 +162,7 @@ decodeFunctionResult(functionFragment: 'isBeneficiaryPaid', data: BytesLike): Re
 decodeFunctionResult(functionFragment: 'jokalanteTargeting', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'kycCompliance', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'lastTriggerTimestamp', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'mobileMoneyDispatched', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'mobileMoneyProvider', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'multiOracle', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'oracleTolerance', data: BytesLike): Result;
@@ -171,6 +174,7 @@ decodeFunctionResult(functionFragment: 'proxiableUUID', data: BytesLike): Result
 decodeFunctionResult(functionFragment: 'regionEmergency', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'regionNonces', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'renounceRole', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'retryMobileMoneyDispatch', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'revokeRole', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'riskThreshold', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setContractAddresses', data: BytesLike): Result;
@@ -342,6 +346,18 @@ decodeFunctionResult(functionFragment: 'validateTrigger', data: BytesLike): Resu
       export type InputTuple = [eventId: string, beneficiaryHash: BytesLike];
       export type OutputTuple = [eventId: string, beneficiaryHash: string];
       export interface OutputObject {eventId: string, beneficiaryHash: string };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace MobileMoneyDispatchRetriedEvent {
+      export type InputTuple = [eventId: string, count: BigNumberish, totalAmount: BigNumberish];
+      export type OutputTuple = [eventId: string, count: bigint, totalAmount: bigint];
+      export interface OutputObject {eventId: string, count: bigint, totalAmount: bigint };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -944,6 +960,14 @@ decodeFunctionResult(functionFragment: 'validateTrigger', data: BytesLike): Resu
     
 
     
+    mobileMoneyDispatched: TypedContractMethod<
+      [arg0: BytesLike, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
     mobileMoneyProvider: TypedContractMethod<
       [],
       [string],
@@ -1026,6 +1050,14 @@ decodeFunctionResult(functionFragment: 'validateTrigger', data: BytesLike): Resu
     
     renounceRole: TypedContractMethod<
       [role: BytesLike, callerConfirmation: AddressLike, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
+    retryMobileMoneyDispatch: TypedContractMethod<
+      [eventId: string, beneficiaryHashes: BytesLike[], amounts: BigNumberish[], phoneHashes: BytesLike[], providers: BigNumberish[], ],
       [void],
       'nonpayable'
     >
@@ -1439,6 +1471,11 @@ getFunction(nameOrSignature: 'lastTriggerTimestamp'): TypedContractMethod<
       [bigint],
       'view'
     >;
+getFunction(nameOrSignature: 'mobileMoneyDispatched'): TypedContractMethod<
+      [arg0: BytesLike, ],
+      [boolean],
+      'view'
+    >;
 getFunction(nameOrSignature: 'mobileMoneyProvider'): TypedContractMethod<
       [],
       [string],
@@ -1491,6 +1528,11 @@ getFunction(nameOrSignature: 'regionNonces'): TypedContractMethod<
     >;
 getFunction(nameOrSignature: 'renounceRole'): TypedContractMethod<
       [role: BytesLike, callerConfirmation: AddressLike, ],
+      [void],
+      'nonpayable'
+    >;
+getFunction(nameOrSignature: 'retryMobileMoneyDispatch'): TypedContractMethod<
+      [eventId: string, beneficiaryHashes: BytesLike[], amounts: BigNumberish[], phoneHashes: BytesLike[], providers: BigNumberish[], ],
       [void],
       'nonpayable'
     >;
@@ -1608,6 +1650,7 @@ getEvent(key: 'FloodTriggerCreated'): TypedContractEvent<FloodTriggerCreatedEven
 getEvent(key: 'GovernanceOverride'): TypedContractEvent<GovernanceOverrideEvent.InputTuple, GovernanceOverrideEvent.OutputTuple, GovernanceOverrideEvent.OutputObject>;
 getEvent(key: 'Initialized'): TypedContractEvent<InitializedEvent.InputTuple, InitializedEvent.OutputTuple, InitializedEvent.OutputObject>;
 getEvent(key: 'KYCBeneficiarySkipped'): TypedContractEvent<KYCBeneficiarySkippedEvent.InputTuple, KYCBeneficiarySkippedEvent.OutputTuple, KYCBeneficiarySkippedEvent.OutputObject>;
+getEvent(key: 'MobileMoneyDispatchRetried'): TypedContractEvent<MobileMoneyDispatchRetriedEvent.InputTuple, MobileMoneyDispatchRetriedEvent.OutputTuple, MobileMoneyDispatchRetriedEvent.OutputObject>;
 getEvent(key: 'MobileMoneyPaymentsFailed'): TypedContractEvent<MobileMoneyPaymentsFailedEvent.InputTuple, MobileMoneyPaymentsFailedEvent.OutputTuple, MobileMoneyPaymentsFailedEvent.OutputObject>;
 getEvent(key: 'MobileMoneyPaymentsInitiated'): TypedContractEvent<MobileMoneyPaymentsInitiatedEvent.InputTuple, MobileMoneyPaymentsInitiatedEvent.OutputTuple, MobileMoneyPaymentsInitiatedEvent.OutputObject>;
 getEvent(key: 'OracleToleranceUpdated'): TypedContractEvent<OracleToleranceUpdatedEvent.InputTuple, OracleToleranceUpdatedEvent.OutputTuple, OracleToleranceUpdatedEvent.OutputObject>;
@@ -1675,6 +1718,10 @@ getEvent(key: 'Upgraded'): TypedContractEvent<UpgradedEvent.InputTuple, Upgraded
 
       'KYCBeneficiarySkipped(string,bytes32)': TypedContractEvent<KYCBeneficiarySkippedEvent.InputTuple, KYCBeneficiarySkippedEvent.OutputTuple, KYCBeneficiarySkippedEvent.OutputObject>;
       KYCBeneficiarySkipped: TypedContractEvent<KYCBeneficiarySkippedEvent.InputTuple, KYCBeneficiarySkippedEvent.OutputTuple, KYCBeneficiarySkippedEvent.OutputObject>;
+    
+
+      'MobileMoneyDispatchRetried(string,uint256,uint256)': TypedContractEvent<MobileMoneyDispatchRetriedEvent.InputTuple, MobileMoneyDispatchRetriedEvent.OutputTuple, MobileMoneyDispatchRetriedEvent.OutputObject>;
+      MobileMoneyDispatchRetried: TypedContractEvent<MobileMoneyDispatchRetriedEvent.InputTuple, MobileMoneyDispatchRetriedEvent.OutputTuple, MobileMoneyDispatchRetriedEvent.OutputObject>;
     
 
       'MobileMoneyPaymentsFailed(string,uint256,uint256)': TypedContractEvent<MobileMoneyPaymentsFailedEvent.InputTuple, MobileMoneyPaymentsFailedEvent.OutputTuple, MobileMoneyPaymentsFailedEvent.OutputObject>;

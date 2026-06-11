@@ -11,7 +11,7 @@ import "../interfaces/IMobileMoneyProvider.sol";
  * @author DPA Foundation — OPAL Platform
  * @notice Production Mobile Money provider for Senegal
  * @dev Implements IMobileMoneyProvider with:
- *      - Orange Money, Wave, Free Money, E-Money support
+ *      - Orange Money, Wave support
  *      - Provider supplied as parameter (any provider can serve any phone number)
  *      - Off-chain relayer bridge pattern
  *      - Nonce-based replay protection
@@ -24,8 +24,6 @@ import "../interfaces/IMobileMoneyProvider.sol";
  * ├──────────────────┼──────────────────────┤
  * │ Orange Money     │ Orange Money API v3  │
  * │ Wave             │ Wave Business API    │
- * │ Free Money       │ Free Money B2B       │
- * │ E-Money          │ SGBS E-Money         │
  * └──────────────────┴──────────────────────┘
  *
  * Architecture:
@@ -214,6 +212,7 @@ contract MobileMoneyProvider is IMobileMoneyProvider, Ownable2Step, Pausable, Re
         if (block.timestamp > payment.initiatedAt + paymentTimeout) {
             payment.status = PaymentStatus.EXPIRED;
             pendingPaymentCount--;
+            _refundDailySpend(payment);
             emit PaymentExpired(paymentId);
             revert PaymentExpiredError(paymentId);
         }
@@ -245,11 +244,7 @@ contract MobileMoneyProvider is IMobileMoneyProvider, Ownable2Step, Pausable, Re
         totalPaymentsFailed++;
         pendingPaymentCount--;
 
-        // Refund daily spend
-        uint256 day = payment.initiatedAt / 1 days;
-        if (regionDailySpend[payment.region][day] >= payment.amount) {
-            regionDailySpend[payment.region][day] -= payment.amount;
-        }
+        _refundDailySpend(payment);
 
         emit PaymentFailed(paymentId, reason);
     }
@@ -263,10 +258,17 @@ contract MobileMoneyProvider is IMobileMoneyProvider, Ownable2Step, Pausable, Re
         if (payment.status != PaymentStatus.FAILED) revert PaymentNotPending(paymentId);
         if (payment.retryCount >= MAX_RETRIES) revert MaxRetriesExceeded(paymentId);
 
+        // Re-reserve the daily allowance under today's date, since failPayment
+        // already refunded it under the original initiation date.
+        _checkDailyLimit(payment.region, payment.amount);
+
         payment.status = PaymentStatus.PENDING;
         payment.retryCount++;
         payment.initiatedAt = block.timestamp; // Reset timeout
         pendingPaymentCount++;
+
+        uint256 today = block.timestamp / 1 days;
+        regionDailySpend[payment.region][today] += payment.amount;
 
         emit PaymentRetried(paymentId, payment.retryCount);
     }
@@ -367,6 +369,7 @@ contract MobileMoneyProvider is IMobileMoneyProvider, Ownable2Step, Pausable, Re
             if (block.timestamp > payment.initiatedAt + paymentTimeout) {
                 payment.status = PaymentStatus.EXPIRED;
                 pendingPaymentCount--;
+                _refundDailySpend(payment);
                 emit PaymentExpired(paymentIds[i]);
                 continue;
             }
@@ -485,10 +488,11 @@ contract MobileMoneyProvider is IMobileMoneyProvider, Ownable2Step, Pausable, Re
         if (paymentIds.length > MAX_BATCH_SIZE) revert BatchTooLarge(paymentIds.length); // L-09 fix
         for (uint256 i = 0; i < paymentIds.length; i++) {
             Payment storage payment = _payments[paymentIds[i]];
-            if (payment.status == PaymentStatus.PENDING && 
+            if (payment.status == PaymentStatus.PENDING &&
                 block.timestamp > payment.initiatedAt + paymentTimeout) {
                 payment.status = PaymentStatus.EXPIRED;
                 pendingPaymentCount--;
+                _refundDailySpend(payment);
                 emit PaymentExpired(paymentIds[i]);
             }
         }
@@ -556,6 +560,20 @@ contract MobileMoneyProvider is IMobileMoneyProvider, Ownable2Step, Pausable, Re
         uint256 spent = regionDailySpend[region][today];
         if (spent + amount > limit) {
             revert DailyLimitExceeded(region, limit, spent + amount);
+        }
+    }
+
+    /**
+     * @dev Reverses the regionDailySpend accounting recorded for a payment on
+     * the day it was initiated. Used whenever a payment leaves the PENDING
+     * state without being disbursed (FAILED or EXPIRED), so the daily
+     * allowance it reserved becomes available again.
+     * @param payment The payment whose initiation-day spend should be refunded
+     */
+    function _refundDailySpend(Payment storage payment) internal {
+        uint256 day = payment.initiatedAt / 1 days;
+        if (regionDailySpend[payment.region][day] >= payment.amount) {
+            regionDailySpend[payment.region][day] -= payment.amount;
         }
     }
 }

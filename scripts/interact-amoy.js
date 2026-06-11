@@ -15,6 +15,12 @@ const keccak256 = require("keccak256");
 
 const { ethers } = await hre.network.connect();
 
+// Derive network name from provider (HH3 compatible)
+const _netInfo = await ethers.provider.getNetwork();
+const _chainIdMap = { 31337: "localhost", 1337: "hardhat", 80002: "amoy", 137: "polygon" };
+const networkName = _chainIdMap[Number(_netInfo.chainId)] ?? _netInfo.name;
+const isLocalNetwork = networkName === "hardhat" || networkName === "localhost";
+
 // ========================================
 // Load deployment manifest
 // ========================================
@@ -31,10 +37,24 @@ console.log("╔═════════════════════�
 console.log("║  OPAL Platform — Amoy Testnet Interaction              ║");
 console.log("╚══════════════════════════════════════════════════════════╝\n");
 
-const [signer] = await ethers.getSigners();
+const [signer, ...otherSigners] = await ethers.getSigners();
 const balance = await ethers.provider.getBalance(signer.address);
 console.log(`  Signer:  ${signer.address}`);
 console.log(`  Balance: ${ethers.formatEther(balance)} MATIC\n`);
+
+// V-06 fix follow-up: deploy-amoy.js no longer grants OPERATOR_ROLE to the
+// deployer, so createFloodTrigger (step 5) needs a signer that holds it.
+// Resolve OPERATOR_ADDRESS to one of our local signers if possible, or fall
+// back to an additional Hardhat signer on local networks.
+let operatorSigner = null;
+const operatorEnvAddr = process.env.OPERATOR_ADDRESS;
+if (operatorEnvAddr) {
+    operatorSigner = [signer, ...otherSigners].find(
+        (s) => s.address.toLowerCase() === operatorEnvAddr.toLowerCase()
+    ) ?? null;
+} else if (isLocalNetwork) {
+    operatorSigner = otherSigners[0] ?? signer;
+}
 
 // ========================================
 // Connect to deployed contracts
@@ -120,59 +140,66 @@ try {
 console.log("\n── 5. Creating Test Flood Trigger ──\n");
 
 try {
-    // Create 2 test beneficiaries
-    const benef1Hash = ethers.keccak256(ethers.toUtf8Bytes("beneficiary-test-001"));
-    const benef2Hash = ethers.keccak256(ethers.toUtf8Bytes("beneficiary-test-002"));
-    const amount1 = 25000;
-    const amount2 = 25000;
+    // Verify the resolved signer actually holds OPERATOR_ROLE before
+    // attempting the trigger — avoids an opaque AccessControl revert.
+    const operatorRole = await floodPrediction.OPERATOR_ROLE();
+    if (!operatorSigner || !(await floodPrediction.hasRole(operatorRole, operatorSigner.address))) {
+        console.log("  ⏭️  Skipping: no available signer holds OPERATOR_ROLE.");
+        console.log("     Set OPERATOR_ADDRESS to a configured signer with OPERATOR_ROLE to run this step.");
+    } else {
+        // Create 2 test beneficiaries
+        const benef1Hash = ethers.keccak256(ethers.toUtf8Bytes("beneficiary-test-001"));
+        const benef2Hash = ethers.keccak256(ethers.toUtf8Bytes("beneficiary-test-002"));
+        const amount1 = 25000;
+        const amount2 = 25000;
 
-    // Build Merkle tree (double-hash leaves per OpenZeppelin standard)
-    const leaf1 = ethers.keccak256(ethers.solidityPacked(
-        ["bytes32"],
-        [ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["bytes32", "uint256"], [benef1Hash, amount1]))]
-    ));
-    const leaf2 = ethers.keccak256(ethers.solidityPacked(
-        ["bytes32"],
-        [ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["bytes32", "uint256"], [benef2Hash, amount2]))]
-    ));
+        // Build Merkle tree (double-hash leaves per OpenZeppelin standard)
+        const leaf1 = ethers.keccak256(ethers.solidityPacked(
+            ["bytes32"],
+            [ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["bytes32", "uint256"], [benef1Hash, amount1]))]
+        ));
+        const leaf2 = ethers.keccak256(ethers.solidityPacked(
+            ["bytes32"],
+            [ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["bytes32", "uint256"], [benef2Hash, amount2]))]
+        ));
 
-    const tree = new MerkleTree([leaf1, leaf2], keccak256, { sortPairs: true });
-    const merkleRoot = tree.getHexRoot();
-    console.log(`  Merkle Root: ${merkleRoot}`);
-    console.log(`  Beneficiary 1: ${benef1Hash}`);
-    console.log(`  Beneficiary 2: ${benef2Hash}`);
+        const tree = new MerkleTree([leaf1, leaf2], keccak256, { sortPairs: true });
+        const merkleRoot = tree.getHexRoot();
+        console.log(`  Merkle Root: ${merkleRoot}`);
+        console.log(`  Beneficiary 1: ${benef1Hash}`);
+        console.log(`  Beneficiary 2: ${benef2Hash}`);
 
-    // Pick a region that hasn't been triggered recently (rotate through regions)
-    const triggerRegions = ["SN-TH", "SN-DK", "SN-SL", "SN-ZG", "SN-KL", "SN-TC"];
-    const regionIndex = Number(await floodPrediction.getSystemStats().then(s => s[0])) % triggerRegions.length;
-    const targetRegion = triggerRegions[regionIndex];
+        // Pick a region that hasn't been triggered recently (rotate through regions)
+        const triggerRegions = ["SN-TH", "SN-DK", "SN-SL", "SN-ZG", "SN-KL", "SN-TC"];
+        const regionIndex = Number(await floodPrediction.getSystemStats().then(s => s[0])) % triggerRegions.length;
+        const targetRegion = triggerRegions[regionIndex];
 
-    // Create flood trigger
-    console.log(`\n  Submitting flood trigger for ${targetRegion} (riskScore=85)...`);
-    const tx = await floodPrediction.createFloodTrigger(
-        targetRegion,   // region (rotated)
-        85,             // riskScore (CRITICAL)
-        merkleRoot,     // merkleRoot
-        50000,          // totalAmount (50K FCFA)
-        2               // beneficiaryCount
-    );
-    console.log(`  Tx hash: ${tx.hash}`);
-    
-    const receipt = await tx.wait();
-    console.log(`  ✅ Trigger created! Gas used: ${receipt.gasUsed}`);
+        // Create flood trigger
+        console.log(`\n  Submitting flood trigger for ${targetRegion} (riskScore=85)...`);
+        const tx = await floodPrediction.connect(operatorSigner).createFloodTrigger(
+            targetRegion,   // region (rotated)
+            85,             // riskScore (CRITICAL)
+            merkleRoot,     // merkleRoot
+            50000,          // totalAmount (50K FCFA)
+            2               // beneficiaryCount
+        );
+        console.log(`  Tx hash: ${tx.hash}`);
 
-    // Try to find the event
-    for (const log of receipt.logs) {
-        try {
-            const parsed = floodPrediction.interface.parseLog({ topics: log.topics, data: log.data });
-            if (parsed && parsed.name === "FloodTriggerCreated") {
-                console.log(`  Event ID: ${parsed.args[0]}`);
-                console.log(`  Region:   ${parsed.args[1]}`);
-                console.log(`  Risk:     ${parsed.args[2]}`);
-            }
-        } catch {}
+        const receipt = await tx.wait();
+        console.log(`  ✅ Trigger created! Gas used: ${receipt.gasUsed}`);
+
+        // Try to find the event
+        for (const log of receipt.logs) {
+            try {
+                const parsed = floodPrediction.interface.parseLog({ topics: log.topics, data: log.data });
+                if (parsed && parsed.name === "FloodTriggerCreated") {
+                    console.log(`  Event ID: ${parsed.args[0]}`);
+                    console.log(`  Region:   ${parsed.args[1]}`);
+                    console.log(`  Risk:     ${parsed.args[2]}`);
+                }
+            } catch {}
+        }
     }
-
 } catch (e) {
     console.log(`  ⚠️  Trigger creation failed: ${e.message}`);
 }

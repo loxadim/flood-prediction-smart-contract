@@ -119,7 +119,7 @@ The central orchestrator contract tested across initialization, trigger lifecycl
 - **Initialization**: Correct role assignments (ADMIN, OPERATOR, PAUSER, UPGRADER), default thresholds, version
 - **Trigger Lifecycle**: Creation → Validation → Payment → Cancellation → Expiry
 - **Budget Management**: Allocation, regional budget tracking, InsufficientBudget checks
-- **Risk Assessment**: Score validation (0-100), threshold enforcement, governance override at 85+
+- **Risk Assessment**: Score validation (0-100), threshold enforcement for standard triggers, admin-only governance override path
 - **Cooldown Enforcement**: Adaptive cooldowns — 10min (CRITICAL ≥85), 30min (HIGH 70-84), 1h (NORMAL)
 - **Batch Processing**: MAX_BATCH_SIZE=50 enforcement, duplicate payment prevention
 - **Emergency Mode**: Global and regional emergency activation/deactivation
@@ -172,8 +172,8 @@ The central orchestrator contract tested across initialization, trigger lifecycl
 ### 4.4 MobileMoneyProvider (35 tests)
 
 **Key validations:**
-- 4 providers: Orange Money (+221 77/78), Wave (+221 76), Free Money (+221 70), E-Money (+221 75)
-- Phone number validation per provider prefix
+- Provider enum support: Orange Money, Wave, Free Money, E-Money
+- Phone numbers remain off-chain; the contract stores `phoneHash` only
 - Payment lifecycle: initiatePayment → confirmPayment / failPayment
 - MAX_RETRIES = 3, retryPayment logic
 - Duplicate payment prevention (H8-MMP fix)

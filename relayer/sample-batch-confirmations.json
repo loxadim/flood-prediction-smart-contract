@@ -1,0 +1,10 @@
+[
+  {
+    "paymentId": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "transactionRef": "TX-REF-12345"
+  },
+  {
+    "paymentId": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "transactionRef": "TX-REF-12346"
+  }
+]

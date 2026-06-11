@@ -18,9 +18,9 @@ export declare namespace IOpalGovernance {
     }
 
   export interface OpalGovernanceUpgradeableInterface extends Interface {
-    getFunction(nameOrSignature: "DEFAULT_DEADLINE" | "EMERGENCY_DEADLINE" | "EXECUTION_DELAY" | "MAX_ACTORS" | "MIN_QUORUM" | "UPGRADE_INTERFACE_VERSION" | "acceptOwnership" | "activeActorCount" | "actorList" | "actors" | "addGovernanceActor" | "allowedSelectors" | "approveUpgrade" | "approvedUpgrades" | "createProposal" | "executeProposal" | "executedProposalCount" | "executionGasLimit" | "expireProposal" | "floodPredictionContract" | "getActiveActorCount" | "getActorList" | "getGovernanceActor" | "getProposal" | "getQuorum" | "getStats" | "hasSignedProposal" | "initialize" | "owner" | "pendingOwner" | "proposalCount" | "proposalRejectionCount" | "proposalRejections" | "proposalSignatures" | "proposals" | "proxiableUUID" | "quorum" | "quorumReachedAt" | "rejectProposal" | "removeGovernanceActor" | "renounceOwnership" | "setAllowedSelector" | "setAllowedSelectorBatch" | "setExecutionGasLimit" | "setFloodPredictionContract" | "signProposal" | "transferOwnership" | "updateQuorum" | "upgradeToAndCall"): FunctionFragment;
+    getFunction(nameOrSignature: "DEFAULT_DEADLINE" | "EMERGENCY_DEADLINE" | "EXECUTION_DELAY" | "MAX_ACTORS" | "MIN_QUORUM" | "UPGRADE_INTERFACE_VERSION" | "acceptOwnership" | "activeActorCount" | "actorList" | "actors" | "addGovernanceActor" | "allowedSelectors" | "allowedTargets" | "approveUpgrade" | "approvedUpgrades" | "createProposal" | "emergencyAllowedSelectors" | "executeProposal" | "executedProposalCount" | "executionGasLimit" | "expireProposal" | "floodPredictionContract" | "getActiveActorCount" | "getActorList" | "getGovernanceActor" | "getProposal" | "getQuorum" | "getStats" | "hasSignedProposal" | "initialize" | "owner" | "pendingOwner" | "proposalCount" | "proposalRejectionCount" | "proposalRejections" | "proposalSignatures" | "proposals" | "proxiableUUID" | "quorum" | "quorumReachedAt" | "rejectProposal" | "removeGovernanceActor" | "renounceOwnership" | "setAllowedSelector" | "setAllowedSelectorBatch" | "setAllowedTarget" | "setEmergencyAllowedSelector" | "setEmergencyAllowedSelectorBatch" | "setExecutionGasLimit" | "setFloodPredictionContract" | "signProposal" | "transferOwnership" | "updateQuorum" | "upgradeToAndCall"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "GovernanceActorAdded" | "GovernanceActorRemoved" | "Initialized" | "OwnershipTransferStarted" | "OwnershipTransferred" | "ProposalCreated" | "ProposalExecuted" | "ProposalExpired" | "ProposalRejected" | "ProposalSigned" | "QuorumUpdated" | "SelectorWhitelisted" | "Upgraded"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "EmergencySelectorWhitelisted" | "GovernanceActorAdded" | "GovernanceActorRemoved" | "Initialized" | "OwnershipTransferStarted" | "OwnershipTransferred" | "ProposalCreated" | "ProposalExecuted" | "ProposalExpired" | "ProposalRejected" | "ProposalSigned" | "QuorumUpdated" | "SelectorWhitelisted" | "TargetWhitelisted" | "Upgraded"): EventFragment;
 
     encodeFunctionData(functionFragment: 'DEFAULT_DEADLINE', values?: undefined): string;
 encodeFunctionData(functionFragment: 'EMERGENCY_DEADLINE', values?: undefined): string;
@@ -34,9 +34,11 @@ encodeFunctionData(functionFragment: 'actorList', values: [BigNumberish]): strin
 encodeFunctionData(functionFragment: 'actors', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'addGovernanceActor', values: [AddressLike, string, string]): string;
 encodeFunctionData(functionFragment: 'allowedSelectors', values: [BytesLike]): string;
+encodeFunctionData(functionFragment: 'allowedTargets', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'approveUpgrade', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'approvedUpgrades', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'createProposal', values: [BigNumberish, string, BytesLike, string, AddressLike]): string;
+encodeFunctionData(functionFragment: 'emergencyAllowedSelectors', values: [BytesLike]): string;
 encodeFunctionData(functionFragment: 'executeProposal', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'executedProposalCount', values?: undefined): string;
 encodeFunctionData(functionFragment: 'executionGasLimit', values?: undefined): string;
@@ -65,6 +67,9 @@ encodeFunctionData(functionFragment: 'removeGovernanceActor', values: [AddressLi
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
 encodeFunctionData(functionFragment: 'setAllowedSelector', values: [BytesLike, boolean]): string;
 encodeFunctionData(functionFragment: 'setAllowedSelectorBatch', values: [BytesLike[], boolean[]]): string;
+encodeFunctionData(functionFragment: 'setAllowedTarget', values: [AddressLike, boolean]): string;
+encodeFunctionData(functionFragment: 'setEmergencyAllowedSelector', values: [BytesLike, boolean]): string;
+encodeFunctionData(functionFragment: 'setEmergencyAllowedSelectorBatch', values: [BytesLike[], boolean[]]): string;
 encodeFunctionData(functionFragment: 'setExecutionGasLimit', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'setFloodPredictionContract', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'signProposal', values: [BigNumberish]): string;
@@ -84,9 +89,11 @@ decodeFunctionResult(functionFragment: 'actorList', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'actors', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'addGovernanceActor', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'allowedSelectors', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'allowedTargets', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'approveUpgrade', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'approvedUpgrades', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'createProposal', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'emergencyAllowedSelectors', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'executeProposal', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'executedProposalCount', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'executionGasLimit', data: BytesLike): Result;
@@ -115,6 +122,9 @@ decodeFunctionResult(functionFragment: 'removeGovernanceActor', data: BytesLike)
 decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setAllowedSelector', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setAllowedSelectorBatch', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'setAllowedTarget', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'setEmergencyAllowedSelector', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'setEmergencyAllowedSelectorBatch', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setExecutionGasLimit', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setFloodPredictionContract', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'signProposal', data: BytesLike): Result;
@@ -124,6 +134,18 @@ decodeFunctionResult(functionFragment: 'upgradeToAndCall', data: BytesLike): Res
   }
 
   
+    export namespace EmergencySelectorWhitelistedEvent {
+      export type InputTuple = [selector: BytesLike, allowed: boolean];
+      export type OutputTuple = [selector: string, allowed: boolean];
+      export interface OutputObject {selector: string, allowed: boolean };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
     export namespace GovernanceActorAddedEvent {
       export type InputTuple = [actor: AddressLike, name: string, role: string];
       export type OutputTuple = [actor: string, name: string, role: string];
@@ -260,6 +282,18 @@ decodeFunctionResult(functionFragment: 'upgradeToAndCall', data: BytesLike): Res
       export type InputTuple = [selector: BytesLike, allowed: boolean];
       export type OutputTuple = [selector: string, allowed: boolean];
       export interface OutputObject {selector: string, allowed: boolean };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace TargetWhitelistedEvent {
+      export type InputTuple = [target: AddressLike, allowed: boolean];
+      export type OutputTuple = [target: string, allowed: boolean];
+      export interface OutputObject {target: string, allowed: boolean };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -410,6 +444,14 @@ decodeFunctionResult(functionFragment: 'upgradeToAndCall', data: BytesLike): Res
     
 
     
+    allowedTargets: TypedContractMethod<
+      [arg0: AddressLike, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
     approveUpgrade: TypedContractMethod<
       [implementation: AddressLike, ],
       [void],
@@ -430,6 +472,14 @@ decodeFunctionResult(functionFragment: 'upgradeToAndCall', data: BytesLike): Res
       [proposalType: BigNumberish, description: string, data: BytesLike, region: string, target: AddressLike, ],
       [bigint],
       'nonpayable'
+    >
+    
+
+    
+    emergencyAllowedSelectors: TypedContractMethod<
+      [arg0: BytesLike, ],
+      [boolean],
+      'view'
     >
     
 
@@ -658,6 +708,30 @@ decodeFunctionResult(functionFragment: 'upgradeToAndCall', data: BytesLike): Res
     
 
     
+    setAllowedTarget: TypedContractMethod<
+      [target: AddressLike, allowed: boolean, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
+    setEmergencyAllowedSelector: TypedContractMethod<
+      [selector: BytesLike, allowed: boolean, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
+    setEmergencyAllowedSelectorBatch: TypedContractMethod<
+      [selectors: BytesLike[], allowed: boolean[], ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     setExecutionGasLimit: TypedContractMethod<
       [newLimit: BigNumberish, ],
       [void],
@@ -768,6 +842,11 @@ getFunction(nameOrSignature: 'allowedSelectors'): TypedContractMethod<
       [boolean],
       'view'
     >;
+getFunction(nameOrSignature: 'allowedTargets'): TypedContractMethod<
+      [arg0: AddressLike, ],
+      [boolean],
+      'view'
+    >;
 getFunction(nameOrSignature: 'approveUpgrade'): TypedContractMethod<
       [implementation: AddressLike, ],
       [void],
@@ -782,6 +861,11 @@ getFunction(nameOrSignature: 'createProposal'): TypedContractMethod<
       [proposalType: BigNumberish, description: string, data: BytesLike, region: string, target: AddressLike, ],
       [bigint],
       'nonpayable'
+    >;
+getFunction(nameOrSignature: 'emergencyAllowedSelectors'): TypedContractMethod<
+      [arg0: BytesLike, ],
+      [boolean],
+      'view'
     >;
 getFunction(nameOrSignature: 'executeProposal'): TypedContractMethod<
       [proposalId: BigNumberish, ],
@@ -923,6 +1007,21 @@ getFunction(nameOrSignature: 'setAllowedSelectorBatch'): TypedContractMethod<
       [void],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'setAllowedTarget'): TypedContractMethod<
+      [target: AddressLike, allowed: boolean, ],
+      [void],
+      'nonpayable'
+    >;
+getFunction(nameOrSignature: 'setEmergencyAllowedSelector'): TypedContractMethod<
+      [selector: BytesLike, allowed: boolean, ],
+      [void],
+      'nonpayable'
+    >;
+getFunction(nameOrSignature: 'setEmergencyAllowedSelectorBatch'): TypedContractMethod<
+      [selectors: BytesLike[], allowed: boolean[], ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'setExecutionGasLimit'): TypedContractMethod<
       [newLimit: BigNumberish, ],
       [void],
@@ -954,7 +1053,8 @@ getFunction(nameOrSignature: 'upgradeToAndCall'): TypedContractMethod<
       'payable'
     >;
 
-    getEvent(key: 'GovernanceActorAdded'): TypedContractEvent<GovernanceActorAddedEvent.InputTuple, GovernanceActorAddedEvent.OutputTuple, GovernanceActorAddedEvent.OutputObject>;
+    getEvent(key: 'EmergencySelectorWhitelisted'): TypedContractEvent<EmergencySelectorWhitelistedEvent.InputTuple, EmergencySelectorWhitelistedEvent.OutputTuple, EmergencySelectorWhitelistedEvent.OutputObject>;
+getEvent(key: 'GovernanceActorAdded'): TypedContractEvent<GovernanceActorAddedEvent.InputTuple, GovernanceActorAddedEvent.OutputTuple, GovernanceActorAddedEvent.OutputObject>;
 getEvent(key: 'GovernanceActorRemoved'): TypedContractEvent<GovernanceActorRemovedEvent.InputTuple, GovernanceActorRemovedEvent.OutputTuple, GovernanceActorRemovedEvent.OutputObject>;
 getEvent(key: 'Initialized'): TypedContractEvent<InitializedEvent.InputTuple, InitializedEvent.OutputTuple, InitializedEvent.OutputObject>;
 getEvent(key: 'OwnershipTransferStarted'): TypedContractEvent<OwnershipTransferStartedEvent.InputTuple, OwnershipTransferStartedEvent.OutputTuple, OwnershipTransferStartedEvent.OutputObject>;
@@ -966,10 +1066,15 @@ getEvent(key: 'ProposalRejected'): TypedContractEvent<ProposalRejectedEvent.Inpu
 getEvent(key: 'ProposalSigned'): TypedContractEvent<ProposalSignedEvent.InputTuple, ProposalSignedEvent.OutputTuple, ProposalSignedEvent.OutputObject>;
 getEvent(key: 'QuorumUpdated'): TypedContractEvent<QuorumUpdatedEvent.InputTuple, QuorumUpdatedEvent.OutputTuple, QuorumUpdatedEvent.OutputObject>;
 getEvent(key: 'SelectorWhitelisted'): TypedContractEvent<SelectorWhitelistedEvent.InputTuple, SelectorWhitelistedEvent.OutputTuple, SelectorWhitelistedEvent.OutputObject>;
+getEvent(key: 'TargetWhitelisted'): TypedContractEvent<TargetWhitelistedEvent.InputTuple, TargetWhitelistedEvent.OutputTuple, TargetWhitelistedEvent.OutputObject>;
 getEvent(key: 'Upgraded'): TypedContractEvent<UpgradedEvent.InputTuple, UpgradedEvent.OutputTuple, UpgradedEvent.OutputObject>;
 
     filters: {
       
+      'EmergencySelectorWhitelisted(bytes4,bool)': TypedContractEvent<EmergencySelectorWhitelistedEvent.InputTuple, EmergencySelectorWhitelistedEvent.OutputTuple, EmergencySelectorWhitelistedEvent.OutputObject>;
+      EmergencySelectorWhitelisted: TypedContractEvent<EmergencySelectorWhitelistedEvent.InputTuple, EmergencySelectorWhitelistedEvent.OutputTuple, EmergencySelectorWhitelistedEvent.OutputObject>;
+    
+
       'GovernanceActorAdded(address,string,string)': TypedContractEvent<GovernanceActorAddedEvent.InputTuple, GovernanceActorAddedEvent.OutputTuple, GovernanceActorAddedEvent.OutputObject>;
       GovernanceActorAdded: TypedContractEvent<GovernanceActorAddedEvent.InputTuple, GovernanceActorAddedEvent.OutputTuple, GovernanceActorAddedEvent.OutputObject>;
     
@@ -1016,6 +1121,10 @@ getEvent(key: 'Upgraded'): TypedContractEvent<UpgradedEvent.InputTuple, Upgraded
 
       'SelectorWhitelisted(bytes4,bool)': TypedContractEvent<SelectorWhitelistedEvent.InputTuple, SelectorWhitelistedEvent.OutputTuple, SelectorWhitelistedEvent.OutputObject>;
       SelectorWhitelisted: TypedContractEvent<SelectorWhitelistedEvent.InputTuple, SelectorWhitelistedEvent.OutputTuple, SelectorWhitelistedEvent.OutputObject>;
+    
+
+      'TargetWhitelisted(address,bool)': TypedContractEvent<TargetWhitelistedEvent.InputTuple, TargetWhitelistedEvent.OutputTuple, TargetWhitelistedEvent.OutputObject>;
+      TargetWhitelisted: TypedContractEvent<TargetWhitelistedEvent.InputTuple, TargetWhitelistedEvent.OutputTuple, TargetWhitelistedEvent.OutputObject>;
     
 
       'Upgraded(address)': TypedContractEvent<UpgradedEvent.InputTuple, UpgradedEvent.OutputTuple, UpgradedEvent.OutputObject>;
