@@ -4,7 +4,7 @@
 **Version**: 1.0.0  
 **Framework**: Hardhat 3.x / Mocha / Chai / Ethers.js 6.x  
 **Solidity**: ^0.8.22 (compiled 0.8.28)  
-**Result**: **465 / 465 tests passing (48s)**
+**Result**: **487 / 487 tests passing (~2m)**
 
 ---
 
@@ -25,17 +25,17 @@
 
 ## 1. Executive Summary
 
-The OPAL Platform smart contract suite achieves **100% test pass rate** across **465 test cases** spread over **15 test files**. Tests cover all 7 production contracts, 1 library, and 3 mock contracts, validating functional correctness, security properties, access control, edge cases, and batch scalability up to 10,000 beneficiaries.
+The OPAL Platform smart contract suite achieves **100% test pass rate** across **487 test cases** spread over **16 test files**. Tests cover all 7 production contracts, 1 library, 3 mock contracts, and the off-chain Mobile Money relayer service, validating functional correctness, security properties, access control, edge cases, and batch scalability up to 10,000 beneficiaries.
 
 | Metric | Value |
 |--------|-------|
-| Total Tests | 465 |
-| Passing | 465 |
+| Total Tests | 487 |
+| Passing | 487 |
 | Failing | 0 |
 | Pending | 0 |
-| Execution Time | ~48s |
-| Test Files | 15 |
-| Contracts Tested | 7 + 1 library |
+| Execution Time | ~2m |
+| Test Files | 16 |
+| Contracts Tested | 7 + 1 library + relayer service |
 | CI/CD | GitHub Actions (build, test, lint, size-check) |
 
 ---
@@ -76,34 +76,36 @@ Mocha Timeout: 120,000 ms
 | # | Test File | Contract Under Test | Tests | Focus |
 |---|-----------|---------------------|-------|-------|
 | 1 | FloodPrediction.test.js | FloodPredictionContract | 55 | Core lifecycle, RBAC, triggers, payments |
-| 2 | MultiOracle.test.js | MultiOracle | 76 | Registration, consensus, IQR outlier detection |
-| 3 | OpalGovernance.test.js | OpalGovernanceUpgradeable | 41 | Actors, proposals, signing, execution |
-| 4 | MobileMoneyProvider.test.js | MobileMoneyProvider | 35 | Payments, providers, retries, timeout |
+| 2 | MultiOracle.test.js | MultiOracle | 77 | Registration, consensus, IQR outlier detection, freshness |
+| 3 | OpalGovernance.test.js | OpalGovernanceUpgradeable | 49 | Actors, proposals, signing, execution, upgrade whitelisting |
+| 4 | MobileMoneyProvider.test.js | MobileMoneyProvider | 38 | Payments, providers, retries, timeout, daily-limit refunds |
 | 5 | WASDIOracleConnector.test.js | WASDIOracleConnector | 42 | Satellite data, anomaly detection, relayers |
 | 6 | JokalanteTargeting.test.js | JokalanteTargeting | 36 | Merkle trees, region mgmt, authorization |
-| 7 | KYCAMLCompliance.test.js | KYCAMLCompliance | 83 | KYC/AML attestations, compliance officer mgmt |
+| 7 | KYCAMLCompliance.test.js | KYCAMLCompliance | 84 | KYC/AML attestations, compliance officer mgmt |
 | 8 | SecurityFixes.test.js | Multiple | 17 | Cross-cutting security validations |
 | 9 | AuditV2Fixes.test.js | FloodPredictionContract | 22 | Audit finding regression tests |
 | 10 | AuditFixValidation.test.js | FloodPredictionContract | 17 | Audit Round 2 regression tests |
-| 11 | BatchBeneficiaries1000.test.js | FloodPredictionContract | 7 | 1,000 beneficiary scale |
-| 12 | BatchBeneficiaries2000.test.js | FloodPredictionContract | 8 | 2,000 beneficiary scale + gas |
-| 13 | BatchBeneficiaries3000.test.js | FloodPredictionContract | 8 | 3,000 beneficiary scale + gas |
-| 14 | BatchBeneficiaries5000.test.js | FloodPredictionContract | 9 | 5,000 beneficiary scale + gas |
-| 15 | BatchBeneficiaries10000.test.js | FloodPredictionContract | 9 | 10,000 beneficiary scale + gas |
+| 11 | Relayer.test.js | Relayer Service (off-chain) | 9 | Security, rate limiting, anomaly detection, audit logging |
+| 12 | BatchBeneficiaries1000.test.js | FloodPredictionContract | 7 | 1,000 beneficiary scale |
+| 13 | BatchBeneficiaries2000.test.js | FloodPredictionContract | 8 | 2,000 beneficiary scale + gas |
+| 14 | BatchBeneficiaries3000.test.js | FloodPredictionContract | 8 | 3,000 beneficiary scale + gas |
+| 15 | BatchBeneficiaries5000.test.js | FloodPredictionContract | 9 | 5,000 beneficiary scale + gas |
+| 16 | BatchBeneficiaries10000.test.js | FloodPredictionContract | 9 | 10,000 beneficiary scale + gas |
 
 ### 3.2 Test Categories
 
 ```mermaid
 pie title Test Distribution by Category
     "Core Contract Logic" : 55
-    "Oracle System" : 76
-    "Governance" : 41
-    "Mobile Money" : 35
+    "Oracle System" : 77
+    "Governance" : 49
+    "Mobile Money" : 38
     "WASDI Oracle" : 42
     "Targeting" : 36
-    "KYC/AML Compliance" : 83
+    "KYC/AML Compliance" : 84
     "Security" : 17
     "Audit Regression" : 39
+    "Relayer Service" : 9
     "Scale Testing" : 41
 ```
 
@@ -125,7 +127,7 @@ The central orchestrator contract tested across initialization, trigger lifecycl
 - **Emergency Mode**: Global and regional emergency activation/deactivation
 - **UUPS Upgrades**: State preservation, re-initialization prevention
 
-### 4.2 MultiOracle (76 tests)
+### 4.2 MultiOracle (77 tests)
 
 **Describe blocks:**
 
@@ -136,7 +138,7 @@ The central orchestrator contract tested across initialization, trigger lifecycl
 | Oracle Deactivation | 4 | Deactivate, revert unregistered/inactive |
 | Oracle Reactivation | 3 | Reactivate, revert conditions |
 | Data Submission | 8 | Submit, increment stats, duplicate prevention, validation |
-| Consensus | 9 | Threshold (3/5), median, IQR outlier, reputation ±, auto-disable |
+| Consensus | 10 | Threshold (3/5), median, IQR outlier, reputation ±, auto-disable, freshness staleness |
 | Round Advancement | 2 | Auto-advance, new-round submission |
 | View Functions | 6 | Reputation, counts, submissions |
 | Owner Configuration | 7 | Threshold, freshness, outliers, access control |
@@ -148,7 +150,7 @@ The central orchestrator contract tested across initialization, trigger lifecycl
 - Consensus threshold default 60%
 - MIN_ORACLE_COUNT = 4
 
-### 4.3 OpalGovernanceUpgradeable (41 tests)
+### 4.3 OpalGovernanceUpgradeable (49 tests)
 
 **Describe blocks:**
 
@@ -160,6 +162,8 @@ The central orchestrator contract tested across initialization, trigger lifecycl
 | Proposal Lifecycle | 13 | Create, sign, execute, reject, expire, deadlines |
 | Configuration | 3 | Set flood prediction address |
 | View Functions | 3 | Stats, quorum, actor count |
+| EMERGENCY_TRIGGER selector whitelist (H12-GOV) | 6 | Owner-only emergency selector config, EMERGENCY_TRIGGER/PARAMETER_CHANGE execution gating, EXECUTION_DELAY still enforced |
+| UPGRADE proposal whitelisting (H13-GOV) | 2 | Self + `approveUpgrade()` whitelisted on initialize; UPGRADE proposal approves new implementation |
 
 **Key validations:**
 - Sign-based governance (signProposal, NOT voting/castVote)
@@ -168,11 +172,13 @@ The central orchestrator contract tested across initialization, trigger lifecycl
 - Double-sign prevention
 - Expired proposal rejection
 - allowedSelectors enforcement for proposal targets
+- H12-GOV: EMERGENCY_TRIGGER and PARAMETER_CHANGE selectors are owner-configurable allowlists, checked on proposal execution
+- H13-GOV: `initialize()` whitelists `(address(this), approveUpgrade.selector)` so UPGRADE proposals can reach the UUPS upgrade path
 
-### 4.4 MobileMoneyProvider (35 tests)
+### 4.4 MobileMoneyProvider (38 tests)
 
 **Key validations:**
-- Provider enum support: Orange Money, Wave, Free Money, E-Money
+- Provider enum support: Orange Money, Wave
 - Phone numbers remain off-chain; the contract stores `phoneHash` only
 - Payment lifecycle: initiatePayment → confirmPayment / failPayment
 - MAX_RETRIES = 3, retryPayment logic
@@ -181,6 +187,7 @@ The central orchestrator contract tested across initialization, trigger lifecycl
 - MAX_PAYMENT = 5,000,000 CFA, MIN_PAYMENT = 500 CFA
 - Batch processing with MAX_BATCH_SIZE = 50
 - Pause/unpause functionality
+- `regionDailySpend` correctly refunded on all EXPIRED transitions (batch confirm + `expireStalePayments`) and re-reserved correctly when `retryPayment` crosses a day boundary (3 new regression tests)
 
 ### 4.5 WASDIOracleConnector (42 tests)
 
@@ -214,7 +221,7 @@ The central orchestrator contract tested across initialization, trigger lifecycl
 - defaultExpiryDuration = 90 days
 - Proof verification for beneficiary eligibility
 
-### 4.7 KYCAMLCompliance (83 tests)
+### 4.7 KYCAMLCompliance (84 tests)
 
 **Describe blocks:**
 
@@ -222,7 +229,7 @@ The central orchestrator contract tested across initialization, trigger lifecycl
 |----------|-------|-------------|
 | Deployment & Initialization | 6 | Owner, roles, default config |
 | Compliance Officer Management | 10 | Add, remove, authorization, limits |
-| KYC Attestation Lifecycle | 18 | Submit, approve, reject, expiry |
+| KYC Attestation Lifecycle | 19 | Submit, approve, reject, expiry, re-submission rules |
 | AML Screening | 12 | Risk levels, sanctions, PEP checks |
 | Beneficiary Status Management | 14 | Reinstate, suspend, self-approval prevention (H-4) |
 | Batch Operations | 8 | Bulk KYC processing, skip on failure (C-1) |
@@ -235,6 +242,29 @@ The central orchestrator contract tested across initialization, trigger lifecycl
 - Compliance officer registration and deactivation
 - KYC attestation expiry enforcement
 - AML risk scoring and sanctions list integration
+- Re-submission of attestations for a SUSPENDED beneficiary reverts — `reinstateBeneficiary()` must be called first (new regression test)
+
+### 4.8 Relayer Service — off-chain (9 tests)
+
+The `relayer/` service bridges on-chain events to Mobile Money provider APIs (Orange Money, Wave) and satellite data submission. `test/Relayer.test.js` covers the relayer's security and operational hardening with plain Mocha/Chai (no Hardhat network required).
+
+**Describe blocks:**
+
+| Category | Tests | Description |
+|----------|-------|-------------|
+| Security | 2 | Hashing of sensitive data (phone numbers), log sanitization |
+| Rate Limiting | 2 | Allow requests within limit, block requests exceeding limit |
+| Anomaly Detection | 2 | Detect high payment-failure rates, do not flag low failure rates |
+| Audit Logging | 2 | Structured logging of payment requests and security events |
+| Provider Integration | 1 | Simulation-mode support for Mobile Money providers |
+
+**Key validations:**
+- Sensitive data (phone numbers) is hashed before logging or persistence
+- Logs are sanitized to avoid leaking sensitive fields
+- Per-key rate limiting blocks bursts beyond the configured threshold
+- Anomaly detector flags providers/regions with abnormally high failure rates
+- All payment requests and security-relevant events are recorded to the audit log
+- Relayer can run against simulated provider responses for local/sandbox testing
 
 ---
 
@@ -489,10 +519,10 @@ Suite à l'audit de sécurité Round 2, 6 findings supplémentaires ont été co
 
 | Metric | Value |
 |--------|-------|
-| Average tests per contract | ~53 |
-| Max tests (KYCAMLCompliance) | 83 |
+| Average tests per contract | ~54 |
+| Max tests (KYCAMLCompliance) | 84 |
 | Min tests (BatchBeneficiaries1000) | 7 |
-| Negative test cases (revert checks) | ~100 |
+| Negative test cases (revert checks) | ~105 |
 | Edge case tests | ~45 |
 | Integration tests | ~30 |
 | Scale tests | 41 |
@@ -526,7 +556,7 @@ Suite à l'audit de sécurité Round 2, 6 findings supplémentaires ont été co
 ## Appendix A — Full Test Output Summary
 
 ```
-465 passing (48s)
+487 passing (~2m)
 
 Test Suites:
   ✅ AuditFixValidation.test.js      — 17 tests
@@ -538,16 +568,17 @@ Test Suites:
   ✅ BatchBeneficiaries10000.test.js  —  9 tests
   ✅ FloodPrediction.test.js          — 55 tests
   ✅ JokalanteTargeting.test.js       — 36 tests
-  ✅ KYCAMLCompliance.test.js         — 83 tests
-  ✅ MobileMoneyProvider.test.js      — 35 tests
-  ✅ MultiOracle.test.js              — 76 tests
-  ✅ OpalGovernance.test.js           — 41 tests
+  ✅ KYCAMLCompliance.test.js         — 84 tests
+  ✅ MobileMoneyProvider.test.js      — 38 tests
+  ✅ MultiOracle.test.js              — 77 tests
+  ✅ OpalGovernance.test.js           — 49 tests
+  ✅ Relayer.test.js                  —  9 tests
   ✅ SecurityFixes.test.js            — 17 tests
   ✅ WASDIOracleConnector.test.js     — 42 tests
   ─────────────────────────────────────────────
-  Total: 465 passing | 0 failing | 0 pending
+  Total: 487 passing | 0 failing | 0 pending
 ```
 
 ---
 
-*Document généré à partir d'une exécution de tests live sur Hardhat 3.x EDR — mis à jour Avril 2026 (post-Audit Round 2)*
+*Document généré à partir d'une exécution de tests live sur Hardhat 3.x EDR — mis à jour Juin 2026 (post-Audit Round 3 / Relayer)*
