@@ -379,8 +379,4 @@ The blockchain layer adds negligible cost (~$0.01-0.05 per operation on Polygon)
 4. **Transparent fund management** (on-chain budget tracking)
 5. **Multi-sig governance** (quorum-based proposal execution)
 
-...addresses all core requirements while maintaining low operational cost on Polygon PoS. The system has been validated with **339 passing tests** across **12 test files**, covering unit tests, integration flows, security fixes, and scale testing up to 5,000 beneficiaries.
-
----
-
-*Document prepared based on verified codebase analysis — Solidity ^0.8.22, Hardhat 3.x, OpenZeppelin ^5.6.1, 339/339 tests passing.*
+...addresses all core requirements while maintaining low operational cost on Polygon PoS. The system has been validated with **487 passing tests** across **16 test files**, covering unit tests, integration flows, security fixes, and scale testing up to 10,000 beneficiaries.

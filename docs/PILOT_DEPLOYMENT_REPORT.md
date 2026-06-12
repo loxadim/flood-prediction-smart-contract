@@ -25,14 +25,14 @@
 
 ## 1. Executive Summary
 
-The OPAL Platform smart contract suite has been **successfully deployed** on Polygon Amoy testnet on **3 April 2026**. All 465 unit tests pass across 15 test files, comprehensive security auditing has been completed with all 28 findings remediated (+ 6 additional findings from April 2026 audit round — all fixed), and batch scalability has been validated up to 10,000 beneficiaries. This report documents the deployment results, configuration procedures, and performance benchmarks for the pilot phase.
+The OPAL Platform smart contract suite has been **successfully deployed** on Polygon Amoy testnet on **3 April 2026**. All 487 unit tests pass across 16 test files, comprehensive security auditing has been completed with all 28 findings remediated (+ 6 additional findings from April 2026 audit round — all fixed), and batch scalability has been validated up to 10,000 beneficiaries. This report documents the deployment results, configuration procedures, and performance benchmarks for the pilot phase.
 
 ### Deployment Readiness (État au 1er avril 2026)
 
 | Criterion | Status | Details |
 |-----------|--------|---------|
 | Smart Contract Code | ✅ Complete | 7 contracts + 1 library, v1.0.0 |
-| Test Suite | ✅ 465/465 passing | 15 test files, 100% pass rate |
+| Test Suite | ✅ 487/487 passing | 16 test files, 100% pass rate |
 | Security Audit — Round 1 | ✅ 28/28 fixed | All H/C/M/L findings remediated |
 | Security Audit — Round 2 | ✅ 6/6 fixed | C-1, C-2, H-1, H-2, H-3, H-4 (avril 2026) |
 | Deployment Script | ✅ Executed | Resumable deploy-amoy.js |
@@ -117,7 +117,7 @@ The OPAL Platform smart contract suite has been **successfully deployed** on Pol
 | Check | Status | Evidence |
 |-------|--------|---------|
 | All contracts compile without errors | ✅ | `npx hardhat compile` → success |
-| All 465 tests pass | ✅ | `npx hardhat test` → 465 passing (48s) |
+| All 487 tests pass | ✅ | `npx hardhat test` → 487 passing (~2m) |
 | No Solhint warnings (critical) | ✅ | solhint ^6.1.0 configured |
 | Storage gaps in upgradeable contracts | ✅ | __gap[48] (FPC), __gap[47] (GOV) |
 | _disableInitializers() in constructors | ✅ | Both UUPS contracts |
@@ -280,7 +280,7 @@ await multiOracle.registerOracle(oracle4Address, "WASDI-Landsat");
 ### 6.1 Overall Results
 
 ```
-465 passing (48s)
+487 passing (~2m)
 0 failing
 0 pending
 ```
@@ -290,15 +290,16 @@ await multiOracle.registerOracle(oracle4Address, "WASDI-Landsat");
 | Test File | Contract | Tests | Status |
 |-----------|----------|-------|--------|
 | FloodPrediction.test.js | FloodPredictionContract | 55 | ✅ |
-| MultiOracle.test.js | MultiOracle | 76 | ✅ |
-| OpalGovernance.test.js | OpalGovernanceUpgradeable | 41 | ✅ |
-| MobileMoneyProvider.test.js | MobileMoneyProvider | 35 | ✅ |
+| MultiOracle.test.js | MultiOracle | 77 | ✅ |
+| OpalGovernance.test.js | OpalGovernanceUpgradeable | 49 | ✅ |
+| MobileMoneyProvider.test.js | MobileMoneyProvider | 38 | ✅ |
 | WASDIOracleConnector.test.js | WASDIOracleConnector | 42 | ✅ |
 | JokalanteTargeting.test.js | JokalanteTargeting | 36 | ✅ |
-| KYCAMLCompliance.test.js | KYCAMLCompliance | 83 | ✅ |
+| KYCAMLCompliance.test.js | KYCAMLCompliance | 84 | ✅ |
 | SecurityFixes.test.js | Cross-contract security | 17 | ✅ |
 | AuditV2Fixes.test.js | Audit regression | 22 | ✅ |
 | AuditFixValidation.test.js | Audit Round 2 regression | 17 | ✅ |
+| Relayer.test.js | Relayer service (off-chain) | 9 | ✅ |
 | BatchBeneficiaries1000.test.js | Scale (1K) | 7 | ✅ |
 | BatchBeneficiaries2000.test.js | Scale (2K) | 8 | ✅ |
 | BatchBeneficiaries3000.test.js | Scale (3K) | 8 | ✅ |
@@ -309,10 +310,11 @@ await multiOracle.registerOracle(oracle4Address, "WASDI-Landsat");
 
 | Category | Count | Coverage |
 |----------|-------|---------|
-| Functional tests | ~170 | Core contract operations |
-| Negative tests (reverts) | ~100 | Error handling, access control |
+| Functional tests | ~180 | Core contract operations |
+| Negative tests (reverts) | ~105 | Error handling, access control |
 | Scale tests | 41 | 1K–10K beneficiaries |
 | Security regression | 56 | Audit findings + security patterns |
+| Relayer service (off-chain) | 9 | Rate limiting, anomaly detection, audit logging |
 
 ---
 

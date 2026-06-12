@@ -12,7 +12,7 @@
 |-----------|--------|--------|
 | Code des contrats | ✅ Complet | v1.0.0 — 7 contrats + 1 bibliothèque |
 | Script de déploiement | ✅ Prêt | `scripts/deploy-amoy.js` résumable |
-| Suite de tests | ✅ 465/465 | 15 fichiers de test, 100% passants |
+| Suite de tests | ✅ 487/487 | 16 fichiers de test, 100% passants |
 | Wallet testnet | ✅ Identifié | `0x135D3c5310046763b6bdA8A8ac0f507E1eEB1fF6` |
 | Fonds MATIC (testnet) | ✅ Suffisant | ~0.3 MATIC requis |
 | RPC Amoy | ✅ Vérifié | `https://polygon-amoy.drpc.org` (opérationnel) |
@@ -67,7 +67,7 @@ npm install
 # Compiler les contrats
 npx hardhat compile
 
-# Lancer la suite de tests (doit être 465/465)
+# Lancer la suite de tests (doit être 487/487)
 npx hardhat test
 ```
 
@@ -213,7 +213,7 @@ Une fois le déploiement effectué, fournir à DPA :
 2. **Les liens Polygonscan** :
    - `https://amoy.polygonscan.com/address/<FloodPredictionProxy>`
    - `https://amoy.polygonscan.com/address/<OpalGovernanceProxy>`
-3. **Les logs de test** : sortie de `npx hardhat test` (465 tests)
+3. **Les logs de test** : sortie de `npx hardhat test` (487 tests)
 4. **Le rapport de déploiement** : `PILOT_DEPLOYMENT_REPORT.md` mis à jour
 
 ---

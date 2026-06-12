@@ -44,10 +44,12 @@ flood-prediction-smart-contract/
 │   └── libs/FloodPredictionLib.sol      # Bibliothèque utilitaire
 │
 ├── interfaces/                   # Interfaces Solidity
-├── test/                         # 15 fichiers de tests (465 tests)
+├── test/                         # 16 fichiers de tests (487 tests)
 ├── scripts/                      # Scripts de déploiement
 │   ├── deploy-amoy.js            # Déploiement Polygon Amoy (résumable)
 │   └── stress-test-1000.js       # Tests de charge
+│
+├── relayer/                      # Service relayer off-chain (Mobile Money, satellite)
 │
 ├── docs/                         # ← Ce dossier (documentation formelle)
 │   ├── README.md                 # Index (ce fichier)
@@ -69,12 +71,12 @@ flood-prediction-smart-contract/
 
 ### Livrable 2 — Smart contracts déployés sur testnet + documentation de sécurité (Avril–Mai 2026) ✅
 
-- Code des contrats : ✅ v1.0.0 complet (7 contrats, 465 tests passants)
+- Code des contrats : ✅ v1.0.0 complet (7 contrats, 487 tests passants)
 - Déploiement Polygon Amoy : ✅ 9 contrats déployés (voir `docs/DEPLOYMENT_GUIDE_AMOY.md`)
 - Documentation de sécurité : ✅ `SECURITY_COMPLIANCE_ASSESSMENT.md` (score 93/100, 28 findings résolus)
 
-### Livrable 3 — Intégration API Mobile Money (sandbox) + journaux de test (Juin 2026) 🔄
+### Livrable 3 — Intégration API Mobile Money (sandbox) + journaux de test (Juin 2026) ✅
 
 - `MobileMoneyProvider.sol` : ✅ Orange Money, Wave
-- `SMART_CONTRACT_TEST_RESULTS.md` : ✅ Résultats détaillés des 465 tests
-- Sandbox relayer off-chain : 🔄 Intégration en cours
+- `SMART_CONTRACT_TEST_RESULTS.md` : ✅ Résultats détaillés des 487 tests
+- Sandbox relayer off-chain : ✅ Implémenté (`relayer/`, voir `relayer/README.md` et `relayer/DEPLOYMENT.md`)
