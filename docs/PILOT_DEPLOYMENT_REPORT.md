@@ -25,14 +25,14 @@
 
 ## 1. Executive Summary
 
-The OPAL Platform smart contract suite has been **successfully deployed** on Polygon Amoy testnet on **3 April 2026**. All 487 unit tests pass across 16 test files, comprehensive security auditing has been completed with all 28 findings remediated (+ 6 additional findings from April 2026 audit round — all fixed), and batch scalability has been validated up to 10,000 beneficiaries. This report documents the deployment results, configuration procedures, and performance benchmarks for the pilot phase.
+The OPAL Platform smart contract suite has been **successfully deployed** on Polygon Amoy testnet on **3 April 2026**. All 501 unit tests pass across 17 test files, comprehensive security auditing has been completed with all 28 findings remediated (+ 6 additional findings from April 2026 audit round — all fixed), and batch scalability has been validated up to 10,000 beneficiaries. This report documents the deployment results, configuration procedures, and performance benchmarks for the pilot phase.
 
 ### Deployment Readiness (État au 1er avril 2026)
 
 | Criterion | Status | Details |
 |-----------|--------|---------|
 | Smart Contract Code | ✅ Complete | 7 contracts + 1 library, v1.0.0 |
-| Test Suite | ✅ 487/487 passing | 16 test files, 100% pass rate |
+| Test Suite | ✅ 501/501 passing | 17 test files, 100% pass rate |
 | Security Audit — Round 1 | ✅ 28/28 fixed | All H/C/M/L findings remediated |
 | Security Audit — Round 2 | ✅ 6/6 fixed | C-1, C-2, H-1, H-2, H-3, H-4 (avril 2026) |
 | Deployment Script | ✅ Executed | Resumable deploy-amoy.js |
@@ -117,7 +117,7 @@ The OPAL Platform smart contract suite has been **successfully deployed** on Pol
 | Check | Status | Evidence |
 |-------|--------|---------|
 | All contracts compile without errors | ✅ | `npx hardhat compile` → success |
-| All 487 tests pass | ✅ | `npx hardhat test` → 487 passing (~2m) |
+| All 501 tests pass | ✅ | `npx hardhat test` → 501 passing (~2m) |
 | No Solhint warnings (critical) | ✅ | solhint ^6.1.0 configured |
 | Storage gaps in upgradeable contracts | ✅ | __gap[48] (FPC), __gap[47] (GOV) |
 | _disableInitializers() in constructors | ✅ | Both UUPS contracts |
@@ -280,7 +280,7 @@ await multiOracle.registerOracle(oracle4Address, "WASDI-Landsat");
 ### 6.1 Overall Results
 
 ```
-487 passing (~2m)
+501 passing (~2m)
 0 failing
 0 pending
 ```

@@ -104,6 +104,14 @@ await (await governance.setFloodPredictionContract(floodPredictionAddr)).wait();
 await (await multiOracle.setGovernance(governanceAddr)).wait();
 await (await targeting.addAuthorizedCaller(floodPredictionAddr)).wait();
 await (await mobileMoney.addRelayer(floodPredictionAddr)).wait();
+// A29 fix: authorize the off-chain relayer service wallet so it can call the
+// settlement functions (confirmPayment/failPayment/batchConfirmPayments) and
+// submitSatelliteData on WASDI. RELAYER_ADDRESS env, or a local signer fallback.
+const relayerServiceAddr = process.env.RELAYER_ADDRESS || (otherSigners[3] && otherSigners[3].address);
+if (relayerServiceAddr) {
+    await (await mobileMoney.addRelayer(relayerServiceAddr)).wait();
+    await (await wasdiOracle.addRelayer(relayerServiceAddr)).wait();
+}
 // V-07 fix: the deployer is registered as the initial MMP relayer in the
 // constructor. Once FloodPrediction is wired in as a relayer, the deployer
 // no longer needs (and should not retain) relayer privileges.

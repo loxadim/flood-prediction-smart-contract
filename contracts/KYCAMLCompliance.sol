@@ -182,10 +182,21 @@ contract KYCAMLCompliance is IKYCAMLCompliance, Ownable2Step {
         if (beneficiaryHash == bytes32(0)) revert InvalidBeneficiaryHash();
         
         ComplianceAttestation storage existing = attestations[beneficiaryHash];
-        // Allow re-submission if previous was rejected or expired
-        if (existing.status == VerificationStatus.VERIFIED ||
+        // Allow re-submission (renewal) if previous was rejected, or VERIFIED but now expired.
+        // A26 fix: without the expiry carve-out a VERIFIED attestation past its expiresAt could
+        // never be renewed (status stays VERIFIED forever, EXPIRED is never set), leaving the
+        // beneficiary permanently non-compliant with no legitimate path back. Renewal goes
+        // through the normal submit -> approve flow, preserving the 4-eyes control.
+        bool verifiedButExpired = existing.status == VerificationStatus.VERIFIED &&
+            existing.expiresAt != 0 && block.timestamp > existing.expiresAt;
+        if ((existing.status == VerificationStatus.VERIFIED && !verifiedButExpired) ||
             existing.status == VerificationStatus.PENDING) {
             revert AttestationAlreadyExists();
+        }
+        // Renewing over an expired VERIFIED record: it stops being counted as approved until
+        // re-approval (approveAttestation will re-increment), keeping approvedCount accurate.
+        if (verifiedButExpired) {
+            approvedCount--;
         }
         // A SUSPENDED beneficiary must go through reinstateBeneficiary(), not
         // a fresh attestation that would silently reset their status to PENDING.
@@ -314,15 +325,21 @@ contract KYCAMLCompliance is IKYCAMLCompliance, Ownable2Step {
         ComplianceAttestation storage attestation = attestations[beneficiaryHash];
         if (attestation.status != VerificationStatus.SUSPENDED) revert NotSuspended();
         
-        // C-03 fix: restore the status the beneficiary had before suspension
+        // C-03 fix: restore the EXACT status the beneficiary had before suspension.
         VerificationStatus previousStatus = statusBeforeSuspension[beneficiaryHash];
         if (previousStatus == VerificationStatus.VERIFIED) {
             attestation.status = VerificationStatus.VERIFIED;
-            attestation.expiresAt = block.timestamp + defaultValidityPeriod;
+            // A27 fix: do NOT grant a fresh validity window here. Reinstatement preserves the
+            // original expiresAt, so a single officer cannot use suspend+reinstate to renew an
+            // (about-to-)expire KYC indefinitely, bypassing the submit -> approve 4-eyes control.
+            // If the original validity has already passed, the beneficiary is VERIFIED-but-expired
+            // (non-compliant) and must be renewed through submitAttestation -> approveAttestation.
             approvedCount++;
         } else {
-            // Was PENDING or other non-VERIFIED status — restore to PENDING, require re-verification
-            attestation.status = VerificationStatus.PENDING;
+            // A27 fix: restore the exact prior status. Previously this collapsed every
+            // non-VERIFIED status to PENDING, which would launder a REJECTED beneficiary
+            // (e.g. auto-suspended by a fraud alert) into an approvable PENDING state.
+            attestation.status = previousStatus;
         }
         suspendedCount--;
         fraudAlertCount[beneficiaryHash] = 0;

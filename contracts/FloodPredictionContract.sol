@@ -205,6 +205,7 @@ contract FloodPredictionContract is
     error RolesNotDistinct();
     error PaymentRecordMismatch();
     error PaymentAlreadyDispatched();
+    error StaleOracleConsensus();
 
     // ============================================
     // Initializer
@@ -289,13 +290,19 @@ contract FloodPredictionContract is
         }
 
         // H-2 fix: MultiOracle must be configured — no trigger without oracle backing.
-        // Only validate score if consensus is reached (avoids blocking during oracle cold-start).
         // H-03 fix: use ±oracleTolerance instead of strict equality to absorb TOCTOU slippage.
+        // A19 fix: do NOT fail open on stale consensus. If a fresh consensus exists, cross-check
+        // the operator's score against it. If a consensus previously existed but is now stale,
+        // reject the trigger — an operator must not fabricate a riskScore on stale oracle data
+        // (emergencies with lagging oracles go through createGovernanceOverrideTrigger instead).
+        // Only a genuine cold-start (no consensus ever recorded) is allowed through for bootstrap.
         if (multiOracle == address(0)) revert OracleNotConfigured();
         if (IMultiOracle(multiOracle).isConsensusReached(region)) {
             uint256 oracleScore = IMultiOracle(multiOracle).getConsensusRiskScore(region);
             uint256 diff = riskScore > oracleScore ? riskScore - oracleScore : oracleScore - riskScore;
             if (diff > oracleTolerance) revert OracleRiskScoreMismatch();
+        } else if (IMultiOracle(multiOracle).getConsensus(region).timestamp != 0) {
+            revert StaleOracleConsensus();
         }
 
         // Check budget (H-01 fix: account for committed amounts)
@@ -597,19 +604,22 @@ contract FloodPredictionContract is
             bytes32 paymentKey = keccak256(abi.encode(eventId, beneficiaryHashes[i]));
             if (paymentRecords[paymentKey].paidAt > 0) revert BeneficiaryAlreadyPaid();
 
-            // H-01 fix: verify via JokalanteTargeting when configured — this respects region expiry
-            // and active status managed by the targeting module.
-            // Falls back to direct Merkle check against trigger.merkleRoot when not configured.
+            // A20 fix: always verify the proof against the IMMUTABLE snapshot root captured at
+            // trigger creation (trigger.merkleRoot). This is tamper-resistant: a mid-trigger
+            // updateMerkleRoot() on JokalanteTargeting cannot change who is eligible for an
+            // already-created event.
+            // V-01 fix: double-hash to prevent second-preimage attacks (OpenZeppelin standard).
+            bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(beneficiaryHashes[i], amounts[i]))));
+            if (!MerkleProof.verify(merkleProofs[i], trigger.merkleRoot, leaf)) {
+                revert InvalidMerkleProof();
+            }
+
+            // H-01 fix: when configured, JokalanteTargeting additionally enforces region active
+            // status and expiry managed by the targeting module.
             if (jokalanteTargeting != address(0)) {
                 if (!IJokalanteTargeting(jokalanteTargeting).verifyBeneficiary(
                     trigger.region, beneficiaryHashes[i], amounts[i], merkleProofs[i]
                 )) revert InvalidMerkleProof();
-            } else {
-                // V-01 fix: double-hash to prevent second-preimage attacks (OpenZeppelin standard)
-                bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(beneficiaryHashes[i], amounts[i]))));
-                if (!MerkleProof.verify(merkleProofs[i], trigger.merkleRoot, leaf)) {
-                    revert InvalidMerkleProof();
-                }
             }
 
             // Record payment on-chain
@@ -741,6 +751,19 @@ contract FloodPredictionContract is
 
         FloodTrigger storage trigger = triggers[eventId];
         if (trigger.timestamp == 0) revert TriggerNotFound();
+        // A21 fix: apply the same safety gates as the primary dispatch path —
+        // a retry must not push money during an emergency or for a cancelled trigger.
+        if (emergencyMode || regionEmergency[trigger.region]) revert EmergencyModeActive();
+        if (trigger.status == TriggerStatus.CANCELLED) revert TriggerNotActive();
+
+        // A21 fix: re-run KYC so a beneficiary suspended/expired AFTER the original
+        // dispatch does not receive a retried payout.
+        if (kycCompliance != address(0)) {
+            bool[] memory kycResults = IKYCAMLCompliance(kycCompliance).batchCheckCompliance(beneficiaryHashes);
+            for (uint256 i = 0; i < count; i++) {
+                if (!kycResults[i]) revert KYCCheckFailed();
+            }
+        }
 
         uint256 totalBatch;
         for (uint256 i = 0; i < count; i++) {
