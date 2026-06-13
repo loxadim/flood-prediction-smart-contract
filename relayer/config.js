@@ -14,7 +14,13 @@ export function getConfig() {
     mobileMoneyProviderAddress: env.MOBILE_MONEY_PROVIDER_ADDRESS,
     wasdiOracleConnectorAddress: env.WASDI_ORACLE_CONNECTOR_ADDRESS || null,
     beneficiaryRegistryPath: env.BENEFICIARY_REGISTRY_PATH || DEFAULT_REGISTRY_PATH,
-    simulatePayments: env.SIMULATE_PAYMENTS === 'true' || false,
+    // A30 fix: default to SIMULATION while the Orange Money / Wave provider APIs are still
+    // being negotiated. If no provider API key is configured, run in simulation mode so the
+    // on-chain flow (initiate -> confirm) works end-to-end without attempting real transfers.
+    // An explicit SIMULATE_PAYMENTS env value always wins.
+    simulatePayments: env.SIMULATE_PAYMENTS != null
+      ? env.SIMULATE_PAYMENTS === 'true'
+      : !(env.ORANGE_MONEY_API_KEY || env.WAVE_API_KEY || env.FREE_MONEY_API_KEY || env.EMONEY_API_KEY),
     providerApiKeys: {
       ORANGE_MONEY: env.ORANGE_MONEY_API_KEY || null,
       WAVE: env.WAVE_API_KEY || null,

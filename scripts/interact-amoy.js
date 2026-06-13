@@ -174,6 +174,19 @@ try {
         const regionIndex = Number(await floodPrediction.getSystemStats().then(s => s[0])) % triggerRegions.length;
         const targetRegion = triggerRegions[regionIndex];
 
+        // A20 fix: seed JokalanteTargeting for this region with the SAME root before triggering.
+        // FloodPrediction.processBatchPayment calls JokalanteTargeting.verifyBeneficiary, which
+        // reverts RegionNotActive until the region is activated via updateMerkleRoot. The deploy
+        // scripts do not seed regions (no beneficiary set exists at deploy time), so the operator
+        // seeds JT per flood event here. Owner-only call — the deployer owns JokalanteTargeting.
+        try {
+            const seedTx = await jokalante.updateMerkleRoot(targetRegion, merkleRoot, 2);
+            await seedTx.wait();
+            console.log(`  ✅ JokalanteTargeting seeded for ${targetRegion} (region active, matching root)`);
+        } catch (e) {
+            console.log(`  ⚠️  Could not seed JokalanteTargeting (need JT owner signer): ${e.message}`);
+        }
+
         // Create flood trigger
         console.log(`\n  Submitting flood trigger for ${targetRegion} (riskScore=85)...`);
         const tx = await floodPrediction.connect(operatorSigner).createFloodTrigger(

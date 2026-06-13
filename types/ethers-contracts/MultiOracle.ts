@@ -23,7 +23,7 @@ export declare namespace IMultiOracle {
     }
 
   export interface MultiOracleInterface extends Interface {
-    getFunction(nameOrSignature: "COMMIT_PHASE_DURATION" | "INITIAL_REPUTATION" | "IQR_MULTIPLIER_DEN" | "IQR_MULTIPLIER_NUM" | "MAX_ORACLES" | "MAX_REPUTATION" | "MAX_RISK_SCORE" | "MIN_ORACLE_COUNT" | "MIN_RISK_SCORE" | "REPUTATION_BONUS" | "REPUTATION_PENALTY" | "REVEAL_WINDOW" | "acceptOwnership" | "activeOracleCount" | "commitData" | "consensusThreshold" | "currentRound" | "dataFreshnessThreshold" | "deactivateOracle" | "getActiveOracleCount" | "getAllOracles" | "getConsensus" | "getConsensusRiskScore" | "getFreshSubmissionCount" | "getOracleAtIndex" | "getOracleCount" | "getOracleInfo" | "getOracleReputation" | "getRegionSubmissionCount" | "getRegionSubmissions" | "getRequiredSubmissions" | "governance" | "hasOracleSubmitted" | "isConsensusReached" | "maxConsecutiveOutliers" | "oracleList" | "owner" | "pause" | "paused" | "pendingOwner" | "reactivateOracle" | "registerOracle" | "renounceOwnership" | "revealData" | "roundCommitStart" | "setConsensusThreshold" | "setDataFreshnessThreshold" | "setGovernance" | "setMaxConsecutiveOutliers" | "submitData" | "transferOwnership" | "unpause"): FunctionFragment;
+    getFunction(nameOrSignature: "COMMIT_PHASE_DURATION" | "INITIAL_REPUTATION" | "IQR_MULTIPLIER_DEN" | "IQR_MULTIPLIER_NUM" | "MAX_ORACLES" | "MAX_REPUTATION" | "MAX_RISK_SCORE" | "MIN_ORACLE_COUNT" | "MIN_RISK_SCORE" | "REPUTATION_BONUS" | "REPUTATION_PENALTY" | "REVEAL_WINDOW" | "acceptOwnership" | "activeOracleCount" | "commitData" | "consensusComputedForRound" | "consensusThreshold" | "currentRound" | "dataFreshnessThreshold" | "deactivateOracle" | "getActiveOracleCount" | "getAllOracles" | "getConsensus" | "getConsensusRiskScore" | "getFreshSubmissionCount" | "getOracleAtIndex" | "getOracleCount" | "getOracleInfo" | "getOracleReputation" | "getRegionSubmissionCount" | "getRegionSubmissions" | "getRequiredSubmissions" | "governance" | "hasOracleSubmitted" | "isConsensusReached" | "maxConsecutiveOutliers" | "oracleList" | "owner" | "pause" | "paused" | "pendingOwner" | "reactivateOracle" | "registerOracle" | "renounceOwnership" | "revealData" | "roundCommitStart" | "setConsensusThreshold" | "setDataFreshnessThreshold" | "setGovernance" | "setMaxConsecutiveOutliers" | "submitData" | "transferOwnership" | "unpause"): FunctionFragment;
 
     getEvent(nameOrSignatureOrTopic: "ConsensusReached" | "ConsensusThresholdUpdated" | "DataCommitted" | "DataFreshnessThresholdUpdated" | "DataRevealed" | "DataSubmitted" | "GovernanceUpdated" | "InsufficientOracleCountWarning" | "MaxConsecutiveOutliersUpdated" | "OracleDeactivated" | "OracleProbationWarning" | "OracleReactivated" | "OracleRegistered" | "OutlierDetected" | "OwnershipTransferStarted" | "OwnershipTransferred" | "Paused" | "ReputationUpdated" | "Unpaused"): EventFragment;
 
@@ -42,6 +42,7 @@ encodeFunctionData(functionFragment: 'REVEAL_WINDOW', values?: undefined): strin
 encodeFunctionData(functionFragment: 'acceptOwnership', values?: undefined): string;
 encodeFunctionData(functionFragment: 'activeOracleCount', values?: undefined): string;
 encodeFunctionData(functionFragment: 'commitData', values: [string, BytesLike]): string;
+encodeFunctionData(functionFragment: 'consensusComputedForRound', values: [string, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'consensusThreshold', values?: undefined): string;
 encodeFunctionData(functionFragment: 'currentRound', values: [string]): string;
 encodeFunctionData(functionFragment: 'dataFreshnessThreshold', values?: undefined): string;
@@ -95,6 +96,7 @@ decodeFunctionResult(functionFragment: 'REVEAL_WINDOW', data: BytesLike): Result
 decodeFunctionResult(functionFragment: 'acceptOwnership', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'activeOracleCount', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'commitData', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'consensusComputedForRound', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'consensusThreshold', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'currentRound', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'dataFreshnessThreshold', data: BytesLike): Result;
@@ -517,6 +519,14 @@ decodeFunctionResult(functionFragment: 'unpause', data: BytesLike): Result;
     
 
     
+    consensusComputedForRound: TypedContractMethod<
+      [arg0: string, arg1: BigNumberish, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
     consensusThreshold: TypedContractMethod<
       [],
       [bigint],
@@ -889,6 +899,11 @@ getFunction(nameOrSignature: 'commitData'): TypedContractMethod<
       [region: string, commitHash: BytesLike, ],
       [void],
       'nonpayable'
+    >;
+getFunction(nameOrSignature: 'consensusComputedForRound'): TypedContractMethod<
+      [arg0: string, arg1: BigNumberish, ],
+      [boolean],
+      'view'
     >;
 getFunction(nameOrSignature: 'consensusThreshold'): TypedContractMethod<
       [],

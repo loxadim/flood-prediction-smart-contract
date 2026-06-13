@@ -208,12 +208,11 @@ contract MobileMoneyProvider is IMobileMoneyProvider, Ownable2Step, Pausable, Re
         if (payment.initiatedAt == 0) revert PaymentNotFound(paymentId);
         if (payment.status != PaymentStatus.PENDING) revert PaymentNotPending(paymentId);
         
-        // Check expiry
+        // Check expiry. A stale payment cannot be confirmed: the state changes
+        // below would be rolled back by the revert anyway, so we revert cleanly.
+        // The payment stays PENDING and is durably moved to EXPIRED (with the
+        // daily-spend refund) by expireStalePayments()/batchConfirmPayments().
         if (block.timestamp > payment.initiatedAt + paymentTimeout) {
-            payment.status = PaymentStatus.EXPIRED;
-            pendingPaymentCount--;
-            _refundDailySpend(payment);
-            emit PaymentExpired(paymentId);
             revert PaymentExpiredError(paymentId);
         }
 
@@ -252,7 +251,7 @@ contract MobileMoneyProvider is IMobileMoneyProvider, Ownable2Step, Pausable, Re
     /**
      * @inheritdoc IMobileMoneyProvider
      */
-    function retryPayment(bytes32 paymentId) external override onlyRelayer nonReentrant {
+    function retryPayment(bytes32 paymentId) external override onlyRelayer whenNotPaused nonReentrant {
         Payment storage payment = _payments[paymentId];
         if (payment.initiatedAt == 0) revert PaymentNotFound(paymentId);
         if (payment.status != PaymentStatus.FAILED) revert PaymentNotPending(paymentId);
@@ -332,6 +331,11 @@ contract MobileMoneyProvider is IMobileMoneyProvider, Ownable2Step, Pausable, Re
 
             paymentIds[i] = paymentId;
             providerPaymentCount[providers[i]]++;
+
+            // Emit a per-item PaymentInitiated so the off-chain relayer can act on
+            // each payment individually (BatchPaymentInitiated alone carries no
+            // paymentIds, leaving the relayer unable to execute or confirm transfers).
+            emit PaymentInitiated(paymentId, beneficiaryHashes[i], amounts[i], region, providers[i]);
         }
 
         totalPaymentsInitiated += count;

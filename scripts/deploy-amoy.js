@@ -51,14 +51,17 @@ function saveProgress(progress) {
 const DEPLOYMENT_CONFIG = {
     // Default risk threshold for flood triggers  
     riskThreshold: 70,
-    // Regions to pre-configure
+    // Regions to pre-configure.
+    // A28 fix: budgets are PLAIN FCFA integers — the contract treats amounts as CFA
+    // (MIN_PAYMENT 500, MAX_PAYMENT 5,000,000), NOT wei. parseEther("1000000") = 1e24
+    // silently disabled the InsufficientBudget guard and corrupted getRegionBudgetRemaining.
     regions: [
-        { code: "SN-TH", name: "Thies", budget: ethers.parseEther("1000000") },
-        { code: "SN-DK", name: "Dakar", budget: ethers.parseEther("2000000") },
-        { code: "SN-SL", name: "Saint-Louis", budget: ethers.parseEther("1500000") },
-        { code: "SN-ZG", name: "Ziguinchor", budget: ethers.parseEther("1200000") },
-        { code: "SN-KL", name: "Kaolack", budget: ethers.parseEther("800000") },
-        { code: "SN-TC", name: "Tambacounda", budget: ethers.parseEther("600000") },
+        { code: "SN-TH", name: "Thies", budget: 1_000_000n },
+        { code: "SN-DK", name: "Dakar", budget: 2_000_000n },
+        { code: "SN-SL", name: "Saint-Louis", budget: 1_500_000n },
+        { code: "SN-ZG", name: "Ziguinchor", budget: 1_200_000n },
+        { code: "SN-KL", name: "Kaolack", budget: 800_000n },
+        { code: "SN-TC", name: "Tambacounda", budget: 600_000n },
     ],
     // Governance configuration
     governance: {
@@ -138,6 +141,12 @@ function resolveRoleAddress(envVar, fallbackSigner, roleName) {
 const operatorAddress = resolveRoleAddress("OPERATOR_ADDRESS", otherSigners[0], "OPERATOR_ROLE");
 const upgraderAddress = resolveRoleAddress("UPGRADER_ADDRESS", otherSigners[1], "UPGRADER_ROLE");
 const pauserAddress = resolveRoleAddress("PAUSER_ADDRESS", otherSigners[2], "PAUSER_ROLE");
+// A29 fix: the off-chain relayer service signs confirmPayment/failPayment/batchConfirmPayments
+// (MobileMoneyProvider) and submitSatelliteData (WASDIOracleConnector) with its OWN wallet
+// (RELAYER_ADDRESS). Without authorizing it, the entire settlement + satellite-ingestion flow
+// reverts UnauthorizedRelayer. This holds even while Orange/Wave APIs are pending (the relayer
+// runs in simulation mode but still confirms payments on-chain).
+const relayerServiceAddress = resolveRoleAddress("RELAYER_ADDRESS", otherSigners[3], "RELAYER (off-chain service)");
 
 console.log(`\n  Network:  ${networkName} (chainId: ${networkChainId})`);
 console.log(`  Deployer: ${deployer.address} (ADMIN)`);
@@ -268,18 +277,39 @@ console.log(`  PAUSER_ROLE:   ${pauserAddress}`);
     // deployer's relayer privileges (granted to msg.sender in MMP's constructor).
     if (!steps.relayerConfigured) {
         logStep("🔧", "Configuring MobileMoneyProvider relayers...");
+        // FloodPrediction calls batchInitiatePayments (initiation side).
         const tx1 = await mobileMoney.addRelayer(deployed.FloodPredictionProxy);
         await tx1.wait();
-        logStep("  ✅", "FloodPrediction authorized as MMP relayer");
+        logStep("  ✅", "FloodPrediction authorized as MMP relayer (initiation)");
 
-        const tx2 = await mobileMoney.removeRelayer(deployer.address);
+        // A29 fix: the off-chain relayer service calls confirmPayment/failPayment/
+        // batchConfirmPayments/expireStalePayments (settlement side).
+        const tx2 = await mobileMoney.addRelayer(relayerServiceAddress);
         await tx2.wait();
+        logStep("  ✅", `Relayer service ${relayerServiceAddress} authorized as MMP relayer (settlement)`);
+
+        const tx3 = await mobileMoney.removeRelayer(deployer.address);
+        await tx3.wait();
         logStep("  ✅", "Deployer relayer privileges revoked");
 
         steps.relayerConfigured = true;
         saveProgress(progress);
     } else {
         logStep("⏭️", "MMP relayers already configured — skipping");
+    }
+
+    // A29 fix: authorize the relayer service to submit satellite data to WASDI.
+    // WASDI's constructor only authorizes the deployer; the off-chain ingestion
+    // worker signs submitSatelliteData with RELAYER_ADDRESS.
+    if (!steps.wasdiRelayerConfigured) {
+        logStep("🔧", "Authorizing relayer service on WASDIOracleConnector...");
+        const tx = await wasdiOracle.addRelayer(relayerServiceAddress);
+        await tx.wait();
+        logStep("  ✅", `Relayer service authorized as WASDI relayer`);
+        steps.wasdiRelayerConfigured = true;
+        saveProgress(progress);
+    } else {
+        logStep("⏭️", "WASDI relayer already configured — skipping");
     }
 
     // Authorize FloodPrediction to call JokalanteTargeting and KYCAMLCompliance
@@ -307,7 +337,7 @@ console.log(`  PAUSER_ROLE:   ${pauserAddress}`);
         for (const region of DEPLOYMENT_CONFIG.regions) {
             const tx = await floodPred.allocateBudget(region.code, region.budget);
             await tx.wait();
-            logStep("  💰", `${region.code} (${region.name}): ${ethers.formatEther(region.budget)} CFA`);
+            logStep("  💰", `${region.code} (${region.name}): ${region.budget.toLocaleString()} CFA`);
         }
         steps.budgetsConfigured = true;
         saveProgress(progress);

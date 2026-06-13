@@ -74,8 +74,13 @@ const beneficiaries = [
     { hash: ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["address"], [beneficiary2.address])), amount: 25000 }
 ];
 
-const leaves = beneficiaries.map(b => 
-    ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["bytes32", "uint256"], [b.hash, b.amount]))
+// A31 fix: leaves must use the OpenZeppelin double-hash format the contracts verify against:
+// keccak256(bytes.concat(keccak256(abi.encode(beneficiaryHash, amount)))). A single hash
+// produces a root that fails on-chain MerkleProof.verify (matches scripts/interact-amoy.js).
+const leaves = beneficiaries.map(b =>
+    ethers.keccak256(
+        ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["bytes32", "uint256"], [b.hash, b.amount]))
+    )
 );
 const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
 const merkleRoot = tree.getHexRoot();

@@ -155,6 +155,12 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
     /// @notice Timestamp when the first commit was made in a round (starts commit phase timer).
     mapping(string => mapping(uint256 => uint256)) public roundCommitStart;
 
+    /// @notice A23 fix: tracks whether consensus has already been computed for a (region, round).
+    /// revealData() does not advance the round, so without this guard every reveal arriving after
+    /// the threshold is crossed would re-run _calculateConsensus() for the same round and re-apply
+    /// reputation rewards/penalties — a single outlier could be penalised enough to auto-deactivate.
+    mapping(string => mapping(uint256 => bool)) public consensusComputedForRound;
+
     // =========================================================================
     //                              ERRORS
     // =========================================================================
@@ -460,7 +466,8 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
         } else {
             uint256 freshCount = _countFreshSubmissions(region, round);
             uint256 required = _requiredSubmissions();
-            if (freshCount >= required && required > 0) {
+            // A23 fix: do not recompute consensus once it has been settled for this round.
+            if (freshCount >= required && required > 0 && !consensusComputedForRound[region][round]) {
                 _calculateConsensus(region, round);
             }
         }
@@ -534,7 +541,8 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
         } else {
             uint256 freshCount = _countFreshSubmissions(region, round);
             uint256 required = _requiredSubmissions();
-            if (freshCount >= required && required > 0) {
+            // A23 fix: do not recompute consensus once it has been settled for this round.
+            if (freshCount >= required && required > 0 && !consensusComputedForRound[region][round]) {
                 _calculateConsensus(region, round);
             }
         }
@@ -550,7 +558,14 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
      * @return The `ConsensusResult` struct.
      */
     function getConsensus(string calldata region) external view override returns (ConsensusResult memory) {
-        return _latestConsensus[region];
+        // A22 fix: report a stale consensus as not reached, consistent with
+        // isConsensusReached()/getConsensusRiskScore(). The timestamp is preserved so
+        // callers can still distinguish "stale" (timestamp != 0) from "never reached".
+        ConsensusResult memory consensus = _latestConsensus[region];
+        if (consensus.reached && block.timestamp - consensus.timestamp > dataFreshnessThreshold) {
+            consensus.reached = false;
+        }
+        return consensus;
     }
 
     /**
@@ -877,6 +892,8 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
      * @param round  The round number.
      */
     function _calculateConsensus(string memory region, uint256 round) internal {
+        // A23 fix: mark this round as settled so later reveals cannot re-run consensus.
+        consensusComputedForRound[region][round] = true;
         OracleData[] storage submissions = _regionSubmissions[region][round];
 
         // -----------------------------------------------------------------

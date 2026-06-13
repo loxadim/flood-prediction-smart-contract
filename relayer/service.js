@@ -158,11 +158,13 @@ export class RelayerService {
   }
 
   async _handleBatchPaymentInitiated(count, region, totalAmount, event) {
-    console.warn('[relayer] batch payment initiated:', {
+    // Informational only: batchInitiatePayments now also emits one PaymentInitiated per
+    // beneficiary (A18 fix), and each is settled individually by _handlePaymentInitiated.
+    // This aggregate event is kept for monitoring/reconciliation.
+    console.log('[relayer] batch payment initiated (aggregate):', {
       count: count.toString(),
       region,
       totalAmount: totalAmount.toString(),
-      warning: 'BatchPaymentInitiated does not include individual payment IDs; on-chain contract must emit PaymentInitiated per item for event-driven processing.',
     });
   }
 

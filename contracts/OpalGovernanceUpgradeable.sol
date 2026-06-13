@@ -114,6 +114,7 @@ contract OpalGovernanceUpgradeable is
     error CannotRemoveBelowQuorum();
     error SelectorNotWhitelisted();
     error TargetNotWhitelisted();
+    error ProposalTypeSelectorMismatch();
     error ExecutionFailed();
     error TimelockNotElapsed();
     error ProposalNotExpired();
@@ -362,7 +363,17 @@ contract OpalGovernanceUpgradeable is
         Proposal storage proposal = proposals[proposalId];
         if (proposal.status != ProposalStatus.PENDING) revert ProposalNotPending();
         if (block.timestamp > proposal.deadline) revert ProposalIsExpired();
-        if (proposal.signatureCount < proposal.requiredSignatures) revert InsufficientSignatures();
+
+        // A25 fix: count only signatures from actors that are STILL active. The stored
+        // signatureCount is not decremented when an actor is removed, so a proposal signed
+        // by since-removed (e.g. compromised) actors must not remain executable on the basis
+        // of those stale signatures. actorList is kept compact (removed actors are popped),
+        // so iterating it counts exactly the currently-active signers. Bounded by MAX_ACTORS.
+        uint256 activeSignatures = 0;
+        for (uint256 i = 0; i < actorList.length; i++) {
+            if (proposalSignatures[proposalId][actorList[i]]) activeSignatures++;
+        }
+        if (activeSignatures < proposal.requiredSignatures) revert InsufficientSignatures();
 
         // H-02 fix: resolve the execution target.
         // Use proposal.target when explicitly set; fall back to floodPredictionContract.
@@ -389,6 +400,15 @@ contract OpalGovernanceUpgradeable is
             } else {
                 if (!allowedSelectors[selector]) revert SelectorNotWhitelisted();
             }
+
+            // A24 fix: bind the upgrade-approval selector to the UPGRADE proposal type.
+            // Otherwise a proposal labeled BUDGET_ALLOCATION/PARAMETER_CHANGE could carry
+            // approveUpgrade(maliciousImpl) in its data — signers would see a benign label
+            // while actually authorizing a UUPS implementation. The reverse is also enforced:
+            // an UPGRADE proposal may only call approveUpgrade.
+            bool isApproveUpgrade = selector == this.approveUpgrade.selector;
+            bool isUpgradeType = proposal.proposalType == ProposalType.UPGRADE;
+            if (isApproveUpgrade != isUpgradeType) revert ProposalTypeSelectorMismatch();
         }
 
         // H11-GOV fix: enforce timelock for non-emergency proposals.

@@ -4,7 +4,7 @@
 **Version**: 1.0.0  
 **Framework**: Hardhat 3.x / Mocha / Chai / Ethers.js 6.x  
 **Solidity**: ^0.8.22 (compiled 0.8.28)  
-**Result**: **487 / 487 tests passing (~2m)**
+**Result**: **501 / 501 tests passing (~2m)**
 
 ---
 
@@ -25,12 +25,12 @@
 
 ## 1. Executive Summary
 
-The OPAL Platform smart contract suite achieves **100% test pass rate** across **487 test cases** spread over **16 test files**. Tests cover all 7 production contracts, 1 library, 3 mock contracts, and the off-chain Mobile Money relayer service, validating functional correctness, security properties, access control, edge cases, and batch scalability up to 10,000 beneficiaries.
+The OPAL Platform smart contract suite achieves **100% test pass rate** across **501 test cases** spread over **17 test files**. Tests cover all 7 production contracts, 1 library, 3 mock contracts, and the off-chain Mobile Money relayer service, validating functional correctness, security properties, access control, edge cases, and batch scalability up to 10,000 beneficiaries.
 
 | Metric | Value |
 |--------|-------|
-| Total Tests | 487 |
-| Passing | 487 |
+| Total Tests | 501 |
+| Passing | 501 |
 | Failing | 0 |
 | Pending | 0 |
 | Execution Time | ~2m |
@@ -85,12 +85,13 @@ Mocha Timeout: 120,000 ms
 | 8 | SecurityFixes.test.js | Multiple | 17 | Cross-cutting security validations |
 | 9 | AuditV2Fixes.test.js | FloodPredictionContract | 22 | Audit finding regression tests |
 | 10 | AuditFixValidation.test.js | FloodPredictionContract | 17 | Audit Round 2 regression tests |
-| 11 | Relayer.test.js | Relayer Service (off-chain) | 9 | Security, rate limiting, anomaly detection, audit logging |
-| 12 | BatchBeneficiaries1000.test.js | FloodPredictionContract | 7 | 1,000 beneficiary scale |
-| 13 | BatchBeneficiaries2000.test.js | FloodPredictionContract | 8 | 2,000 beneficiary scale + gas |
-| 14 | BatchBeneficiaries3000.test.js | FloodPredictionContract | 8 | 3,000 beneficiary scale + gas |
-| 15 | BatchBeneficiaries5000.test.js | FloodPredictionContract | 9 | 5,000 beneficiary scale + gas |
-| 16 | BatchBeneficiaries10000.test.js | FloodPredictionContract | 9 | 10,000 beneficiary scale + gas |
+| 11 | AuditV3Fixes.test.js | Multiple | 14 | Audit Round 3 regression tests (full-project audit) |
+| 12 | Relayer.test.js | Relayer Service (off-chain) | 9 | Security, rate limiting, anomaly detection, audit logging |
+| 13 | BatchBeneficiaries1000.test.js | FloodPredictionContract | 7 | 1,000 beneficiary scale |
+| 14 | BatchBeneficiaries2000.test.js | FloodPredictionContract | 8 | 2,000 beneficiary scale + gas |
+| 15 | BatchBeneficiaries3000.test.js | FloodPredictionContract | 8 | 3,000 beneficiary scale + gas |
+| 16 | BatchBeneficiaries5000.test.js | FloodPredictionContract | 9 | 5,000 beneficiary scale + gas |
+| 17 | BatchBeneficiaries10000.test.js | FloodPredictionContract | 9 | 10,000 beneficiary scale + gas |
 
 ### 3.2 Test Categories
 
@@ -104,10 +105,12 @@ pie title Test Distribution by Category
     "Targeting" : 36
     "KYC/AML Compliance" : 84
     "Security" : 17
-    "Audit Regression" : 39
+    "Audit Regression" : 53
     "Relayer Service" : 9
     "Scale Testing" : 41
 ```
+
+> Audit Regression = AuditV2Fixes (22) + AuditFixValidation (17) + AuditV3Fixes (14).
 
 ---
 
@@ -496,6 +499,29 @@ Suite à l'audit de sécurité Round 2, 6 findings supplémentaires ont été co
 | H-3 | High | Validation oracle stricte (`riskScore == oracleScore`) → TOCTOU | `oracleTolerance` configurable (0–10, défaut 0) ; `setOracleTolerance()` ajouté | FloodPrediction.test.js |
 | H-4 | High | Aucun contrôle contre l'auto-approbation KYC | `submittedBy` enregistré à la soumission ; `SelfApprovalNotAllowed` si approver == submitter | KYCAMLCompliance (embedded) |
 
+### 8.4 Audit Round 3 — Audit global du projet (Juin 2026)
+
+Audit de qualité/sécurité couvrant l'ensemble du projet (7 contrats, service relayer off-chain, scripts de déploiement). 14 findings corrigés, avec tests de régression dans `AuditV3Fixes.test.js` (14 tests).
+
+| Finding | Sévérité | Description | Correction | Tests |
+|---------|----------|-------------|------------|-------|
+| A18 | Bloquant | `batchInitiatePayments` n'émettait pas d'événement par bénéficiaire → le relayer ne pouvait régler aucun paiement | Émission d'un `PaymentInitiated` par bénéficiaire | AuditV3Fixes.test.js |
+| A20 | Bloquant/High | Vérif Merkle contre la racine mutable de JokalanteTargeting (swap possible en cours de trigger) + régions non seedées | Vérif contre le snapshot immuable `trigger.merkleRoot` ; seeding JT dans le flux opérateur | AuditV3Fixes.test.js |
+| A29 | Bloquant | Wallet du service relayer non autorisé (MMP/WASDI) → `UnauthorizedRelayer` | `RELAYER_ADDRESS` autorisé sur MMP + WASDI dans les scripts | (scripts) |
+| A19 | High | `createFloodTrigger` « échouait ouvert » sur consensus oracle périmé | `StaleOracleConsensus` ; cold-start permis pour le bootstrap | AuditV3Fixes.test.js |
+| A21 | High | `retryMobileMoneyDispatch` sans gardes urgence/statut/KYC | Gardes `EmergencyModeActive` / trigger annulé / re-contrôle KYC | AuditV3Fixes.test.js |
+| A25 | High | Signatures d'acteurs gouvernance retirés comptaient encore au quorum | Recompte des signataires encore actifs à l'exécution | AuditV3Fixes.test.js |
+| A24 | High | `approveUpgrade` exécutable via une proposition non-`UPGRADE` | Liaison sélecteur ↔ type `UPGRADE` (`ProposalTypeSelectorMismatch`) | AuditV3Fixes.test.js |
+| A27 | High | `reinstateBeneficiary` octroyait une validité neuve / blanchissait un REJECTED | Préservation de `expiresAt` ; restauration du statut exact | AuditV3Fixes.test.js |
+| A26 | Medium | Attestation VERIFIED expirée non renouvelable | Renouvellement via submit → approve (4-eyes) | AuditV3Fixes.test.js |
+| A22 | Medium | `getConsensus` ignorait la fraîcheur | `reached=false` si périmé, `timestamp` préservé | AuditV3Fixes.test.js |
+| A23 | Medium | `revealData` re-déclenchait le consensus (pénalités répétées) | Garde `consensusComputedForRound` | AuditV3Fixes.test.js |
+| — | Medium | `confirmPayment` (code mort sur expiry) ; `retryPayment` non bloqué en pause | Code mort retiré ; `whenNotPaused` ajouté | AuditV3Fixes.test.js |
+| A28 | Medium | Budgets en `parseEther` (1e24) au lieu de FCFA entiers (garde budget désactivée) | Budgets en FCFA entiers dans les scripts | (scripts) |
+| A31 | Low | Format de leaf Merkle mono-hash dans `interactive-test.js` | Double-hash OZ aligné sur les contrats | (scripts) |
+
+> Note : le relayer off-chain tourne en **mode simulation par défaut** tant que les API Orange Money / Wave ne sont pas disponibles (intégration en cours de négociation) ; la chaîne on-chain initiation → confirmation est néanmoins complète et testée.
+
 ---
 
 ## 9. Code Coverage Summary
@@ -556,11 +582,12 @@ Suite à l'audit de sécurité Round 2, 6 findings supplémentaires ont été co
 ## Appendix A — Full Test Output Summary
 
 ```
-487 passing (~2m)
+501 passing (~2m)
 
 Test Suites:
   ✅ AuditFixValidation.test.js      — 17 tests
   ✅ AuditV2Fixes.test.js             — 22 tests
+  ✅ AuditV3Fixes.test.js             — 14 tests
   ✅ BatchBeneficiaries1000.test.js   —  7 tests
   ✅ BatchBeneficiaries2000.test.js   —  8 tests
   ✅ BatchBeneficiaries3000.test.js   —  8 tests
@@ -576,7 +603,7 @@ Test Suites:
   ✅ SecurityFixes.test.js            — 17 tests
   ✅ WASDIOracleConnector.test.js     — 42 tests
   ─────────────────────────────────────────────
-  Total: 487 passing | 0 failing | 0 pending
+  Total: 501 passing | 0 failing | 0 pending
 ```
 
 ---
