@@ -1,7 +1,7 @@
 # Integration Plan with OPAL Platform
 
 **Project**: OPAL Platform — DPA Foundation  
-**Version**: 1.0.0  
+**Version**: 4.0.0  
 **Status**: Testnet-Ready (Polygon Amoy)
 
 ---
@@ -141,7 +141,7 @@ Primary integration target — all flood operations route through this contract.
 |-----------|----------|------------|-------------|
 | Create Flood Trigger | `createFloodTrigger` | region, riskScore, merkleRoot, totalAmount, beneficiaryCount | WASDI alert + risk threshold |
 | Validate Trigger | `validateTrigger` | eventId | Manual operator approval |
-| Batch Payment | `processBatchPayment` | eventId, hashes[], amounts[], proofs[][], phoneHashes[] | Post-validation auto-process |
+| Batch Payment | `processBatchPayment` | eventId, hashes[], amounts[], proofs[][], phoneHashes[], providers[] | Post-validation auto-process |
 | Validate + Pay | `validateAndProcessPayments` | Same as batch payment | Combined flow |
 | Allocate Budget | `allocateBudget` | region, amount | Admin budget allocation |
 | Cancel Trigger | `cancelTrigger` | eventId, reason | Admin decision (ADMIN_ROLE required) |
@@ -320,6 +320,7 @@ graph TD
 **Technology**: ethers.js v6 (matching contract development stack)
 
 **Key dependencies** (same as smart contract project):
+
 ```json
 {
   "ethers": "^6.14.0",
@@ -329,6 +330,7 @@ graph TD
 ```
 
 **Contract instantiation pattern:**
+
 ```javascript
 import { ethers } from 'ethers';
 
@@ -349,6 +351,7 @@ const floodPrediction = new ethers.Contract(
 **Purpose**: Generate Merkle trees from beneficiary lists for each flood trigger.
 
 **Flow:**
+
 1. OPAL queries beneficiary database for eligible recipients in a region
 2. For each beneficiary: `leaf = keccak256(bytes.concat(keccak256(abi.encode(beneficiaryHash, amount))))` (double-hash)
 3. Build Merkle tree using `merkletreejs` with `keccak256` hash function and sorted pairs
@@ -600,7 +603,7 @@ graph TD
 | Polygon PoS (mainnet) | 137 | polygon-mainnet.infura.io | polygonscan.com |
 | Polygon Amoy (testnet) | 80002 | polygon-amoy.infura.io | amoy.polygonscan.com |
 | Sepolia (testnet) | 11155111 | sepolia.infura.io | sepolia.etherscan.io |
-| Localhost (dev) | 31337 | http://localhost:8545 | — |
+| Localhost (dev) | 31337 | `http://localhost:8545` | — |
 
 ### 8.4 Environment Variables
 
@@ -637,7 +640,7 @@ POLYGONSCAN_API_KEY=...
 
 | Environment | Network | Purpose |
 |-------------|---------|---------|
-| Unit Tests | Hardhat EDR (local) | Contract logic — 339 tests |
+| Unit Tests | Hardhat EDR (local) | Contract logic — 501 tests across 17 files |
 | Integration Tests | Hardhat localhost | End-to-end contract interaction |
 | Testnet Tests | Polygon Amoy | Real network conditions, gas costs |
 | Staging | Polygon Amoy + Mock APIs | Full OPAL + blockchain integration |
@@ -703,7 +706,7 @@ gantt
 | Task | Status | Notes |
 |------|--------|-------|
 | Smart contracts deployed to Amoy | ✅ Ready | Resumable deploy script available |
-| 339/339 tests passing | ✅ Complete | Full regression suite |
+| 501/501 tests passing | ✅ Complete | Full regression suite (17 files) |
 | Deployment manifest generated | ✅ Ready | deploy-amoy.js produces JSON |
 | OPAL backend blockchain service | Pending | ethers.js v6 integration |
 | Event listener service | Pending | WebSocket to Amoy RPC |
@@ -735,4 +738,4 @@ gantt
 
 ---
 
-*Integration Plan — OPAL Platform v4.0.0 — Avril 2026*
+> Integration Plan — OPAL Platform v4.0.0 — Juin 2026

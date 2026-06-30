@@ -2,7 +2,7 @@
 
 **Projet** : OPAL Platform — DPA Foundation
 **Version** : 4.0.0
-**Date** : Avril 2026
+**Date** : Juin 2026
 **Auteur** : Babacar LO — DPA Foundation
 **Licence** : MIT
 **Compilateur Solidity** : 0.8.28 (`pragma ^0.8.22`)
@@ -76,8 +76,8 @@ OPAL (Open Platform for African Livelihoods) est une plateforme blockchain de la
 | Contrats mock | 3 |
 | Interfaces | 7 |
 | Bibliotheque utilitaire | 1 |
-| Tests automatises | 339 |
-| Fichiers de test | 12 |
+| Tests automatises | 501 |
+| Fichiers de test | 17 |
 | Scripts de deploiement | 7 |
 | Correctifs de securite integres | 35+ |
 | Storage gaps disponibles | 48 (FPC) + 47 (Gov) = 95 slots |
@@ -1955,7 +1955,7 @@ npx hardhat build
 ### 25.4 Tests
 
 ```bash
-# Suite complete (339 tests)
+# Suite complete (501 tests)
 npx hardhat test
 
 # Fichier specifique
@@ -2023,7 +2023,7 @@ npx hardhat run scripts/deploy-upgradeable.js --network polygon
 ```
 
 **Checklist production** :
-- [ ] Tous les 339 tests passent
+- [ ] Tous les 501 tests passent
 - [ ] Deploiement testnet reussi
 - [ ] Tests manuels E2E sur testnet
 - [ ] Audit de securite passe
@@ -2147,7 +2147,7 @@ const envOrVar = (name) => process.env[name] ? process.env[name] : configVariabl
 | Commande | Description |
 |----------|-------------|
 | `npm run build` | Compile tous les contrats |
-| `npm test` | Execute la suite de tests complete (339 tests) |
+| `npm test` | Execute la suite de tests complete (501 tests) |
 | `npm run deploy:local` | Deploie sur localhost |
 | `npm run deploy:amoy` | Deploie sur Polygon Amoy |
 | `npm run deploy:sepolia` | Deploie sur Sepolia |
@@ -2164,20 +2164,25 @@ const envOrVar = (name) => process.env[name] ? process.env[name] : configVariabl
 
 | Fichier de test | Focus | Tests |
 |----------------|-------|-------|
-| `FloodPrediction.test.js` | Contrat principal : deploiement, RBAC, budget, triggers, paiements, urgence, upgrade | ~80+ |
-| `MultiOracle.test.js` | Consensus IQR, reputation, commit-reveal, freshness | ~50+ |
-| `WASDIOracleConnector.test.js` | Donnees satellite, buffer circulaire, anomalies, test/prod mode | ~30+ |
-| `OpalGovernance.test.js` | Propositions, quorum, timelock, selecteurs, upgrade approval | ~40+ |
-| `JokalanteTargeting.test.js` | Merkle roots, verification, regions, expiry | ~25+ |
-| `MobileMoneyProvider.test.js` | Paiements, retry, batch, providers, limites | ~30+ |
-| `SecurityFixes.test.js` | Verification de tous les correctifs de securite | ~30+ |
-| `AuditV2Fixes.test.js` | Correctifs audit round 2 | ~15+ |
-| `BatchBeneficiaries1000.test.js` | Stress test 1000 beneficiaires | ~5 |
-| `BatchBeneficiaries2000.test.js` | Stress test 2000 beneficiaires | ~5 |
-| `BatchBeneficiaries3000.test.js` | Stress test 3000 beneficiaires | ~5 |
-| `BatchBeneficiaries5000.test.js` | Stress test 5000 beneficiaires | ~5 |
+| `KYCAMLCompliance.test.js` | Attestations KYC/AML, RGPD, principe des 4 yeux, fraude, expiry/renouvellement | 84 |
+| `MultiOracle.test.js` | Consensus IQR, reputation, commit-reveal, freshness | 77 |
+| `FloodPrediction.test.js` | Contrat principal : deploiement, RBAC, budget, triggers, paiements, urgence, upgrade | 55 |
+| `OpalGovernance.test.js` | Propositions, quorum, timelock, selecteurs, upgrade approval | 49 |
+| `WASDIOracleConnector.test.js` | Donnees satellite, buffer circulaire, anomalies, test/prod mode | 42 |
+| `MobileMoneyProvider.test.js` | Paiements, retry, batch, providers, limites | 38 |
+| `JokalanteTargeting.test.js` | Merkle roots, verification, regions, expiry | 36 |
+| `AuditV2Fixes.test.js` | Correctifs audit round 2 | 22 |
+| `AuditFixValidation.test.js` | Validation des correctifs d'audit initiaux | 17 |
+| `SecurityFixes.test.js` | Verification de tous les correctifs de securite | 17 |
+| `AuditV3Fixes.test.js` | Correctifs audit round 3 (full-project) | 14 |
+| `BatchBeneficiaries10000.test.js` | Stress test 10000 beneficiaires | 9 |
+| `BatchBeneficiaries5000.test.js` | Stress test 5000 beneficiaires | 9 |
+| `Relayer.test.js` | Service relayer Mobile Money (off-chain) | 9 |
+| `BatchBeneficiaries2000.test.js` | Stress test 2000 beneficiaires | 8 |
+| `BatchBeneficiaries3000.test.js` | Stress test 3000 beneficiaires | 8 |
+| `BatchBeneficiaries1000.test.js` | Stress test 1000 beneficiaires | 7 |
 
-**Total : 339 tests**
+**Total : 501 tests (17 fichiers)**
 
 ### 28.2 Couverture par categorie
 
@@ -2658,6 +2663,6 @@ flood-prediction-smart-contract/
 
 ---
 
-*Documentation Technique v4.0.0 — OPAL Platform — DPA Foundation — Avril 2026*
+*Documentation Technique v4.0.0 — OPAL Platform — DPA Foundation — Juin 2026*
 
 *501 tests automatises — 35+ correctifs de securite integres — 7 contrats principaux*
