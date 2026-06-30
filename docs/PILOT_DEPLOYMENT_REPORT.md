@@ -2,7 +2,7 @@
 
 **Project**: OPAL Platform — DPA Foundation
 **Version**: 1.0.0
-**Date mis à jour**: 1er avril 2026 *(version initiale : juin 2025)*
+**Date mis à jour**: juin 2026 *(déploiement Amoy : 3 avril 2026 — version initiale : juin 2025)*
 **Network**: Polygon Amoy Testnet (Chain ID: 80002)
 **Status**: ✅ Deployed — Polygon Amoy Testnet (3 avril 2026)
 
@@ -25,9 +25,9 @@
 
 ## 1. Executive Summary
 
-The OPAL Platform smart contract suite has been **successfully deployed** on Polygon Amoy testnet on **3 April 2026**. All 501 unit tests pass across 17 test files, comprehensive security auditing has been completed with all 28 findings remediated (+ 6 additional findings from April 2026 audit round — all fixed), and batch scalability has been validated up to 10,000 beneficiaries. This report documents the deployment results, configuration procedures, and performance benchmarks for the pilot phase.
+The OPAL Platform smart contract suite has been **successfully deployed** on Polygon Amoy testnet on **3 April 2026**. All 501 unit tests pass across 17 test files, comprehensive security auditing has been completed with all 28 findings remediated (+ 6 from the April 2026 round and 14 from the June 2026 full-project audit round — all fixed), and batch scalability has been validated up to 10,000 beneficiaries. This report documents the deployment results, configuration procedures, and performance benchmarks for the pilot phase.
 
-### Deployment Readiness (État au 1er avril 2026)
+### Deployment Readiness (État au juin 2026)
 
 | Criterion | Status | Details |
 |-----------|--------|---------|
@@ -35,6 +35,7 @@ The OPAL Platform smart contract suite has been **successfully deployed** on Pol
 | Test Suite | ✅ 501/501 passing | 17 test files, 100% pass rate |
 | Security Audit — Round 1 | ✅ 28/28 fixed | All H/C/M/L findings remediated |
 | Security Audit — Round 2 | ✅ 6/6 fixed | C-1, C-2, H-1, H-2, H-3, H-4 (avril 2026) |
+| Security Audit — Round 3 | ✅ 14/14 fixed | Full-project audit across 5 contracts + scripts + relayer (juin 2026) |
 | Deployment Script | ✅ Executed | Resumable deploy-amoy.js |
 | UUPS Proxy Pattern | ✅ Validated | 2 upgradeable contracts tested |
 | Scale Testing | ✅ 10,000 beneficiaries | Up to 200 batches × 50 validated |
@@ -119,7 +120,7 @@ The OPAL Platform smart contract suite has been **successfully deployed** on Pol
 | All contracts compile without errors | ✅ | `npx hardhat compile` → success |
 | All 501 tests pass | ✅ | `npx hardhat test` → 501 passing (~2m) |
 | No Solhint warnings (critical) | ✅ | solhint ^6.1.0 configured |
-| Storage gaps in upgradeable contracts | ✅ | __gap[48] (FPC), __gap[47] (GOV) |
+| Storage gaps in upgradeable contracts | ✅ | __gap[47] (FPC), __gap[45] (GOV) |
 | _disableInitializers() in constructors | ✅ | Both UUPS contracts |
 | Custom errors (no string reverts) | ✅ | Gas-efficient error handling |
 | All audit findings remediated | ✅ | 28/28 fixed with regression tests |
@@ -299,6 +300,7 @@ await multiOracle.registerOracle(oracle4Address, "WASDI-Landsat");
 | SecurityFixes.test.js | Cross-contract security | 17 | ✅ |
 | AuditV2Fixes.test.js | Audit regression | 22 | ✅ |
 | AuditFixValidation.test.js | Audit Round 2 regression | 17 | ✅ |
+| AuditV3Fixes.test.js | Audit Round 3 regression (full-project) | 14 | ✅ |
 | Relayer.test.js | Relayer service (off-chain) | 9 | ✅ |
 | BatchBeneficiaries1000.test.js | Scale (1K) | 7 | ✅ |
 | BatchBeneficiaries2000.test.js | Scale (2K) | 8 | ✅ |
@@ -313,7 +315,7 @@ await multiOracle.registerOracle(oracle4Address, "WASDI-Landsat");
 | Functional tests | ~180 | Core contract operations |
 | Negative tests (reverts) | ~105 | Error handling, access control |
 | Scale tests | 41 | 1K–10K beneficiaries |
-| Security regression | 56 | Audit findings + security patterns |
+| Security regression | 70 | Audit findings + security patterns |
 | Relayer service (off-chain) | 9 | Rate limiting, anomaly detection, audit logging |
 
 ---
@@ -404,7 +406,7 @@ await multiOracle.registerOracle(oracle4Address, "WASDI-Landsat");
 | **abi.encode over abi.encodePacked** | Hash collisions in abi.encodePacked with dynamic types — all hashing migrated to abi.encode (H-11) |
 | **Ownable2Step for standard contracts** | Two-step ownership transfer prevents accidental loss — applied to all 5 standard contracts |
 | **ReentrancyGuardTransient** | EIP-1153 transient storage guard is UUPS-safe; standard ReentrancyGuard also safe for non-proxy |
-| **Storage gaps** | __gap arrays essential for future upgrade compatibility — 49 + 47 slots reserved |
+| **Storage gaps** | __gap arrays essential for future upgrade compatibility — 47 (FPC) + 45 (GOV) slots reserved |
 | **Separate test vs production mode** | productionLocked (irreversible) prevents testMode re-enable on mainnet (H-06) |
 
 ### 9.2 Testing Phase
