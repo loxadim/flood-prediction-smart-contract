@@ -25,14 +25,14 @@
 
 ## 1. Executive Summary
 
-The OPAL Platform smart contract suite has been **successfully deployed** on Polygon Amoy testnet on **3 April 2026**. All 501 unit tests pass across 17 test files, comprehensive security auditing has been completed with all 28 findings remediated (+ 6 from the April 2026 round and 14 from the June 2026 full-project audit round — all fixed), and batch scalability has been validated up to 10,000 beneficiaries. This report documents the deployment results, configuration procedures, and performance benchmarks for the pilot phase.
+The OPAL Platform smart contract suite has been **successfully deployed** on Polygon Amoy testnet on **3 April 2026**. All 512 unit tests pass across 18 test files, comprehensive security auditing has been completed with all 28 findings remediated (+ 6 from the April 2026 round, 14 from the June 2026 full-project audit round, and 15 from the July 2026 full-project audit round — all fixed), and batch scalability has been validated up to 10,000 beneficiaries. This report documents the deployment results, configuration procedures, and performance benchmarks for the pilot phase.
 
 ### Deployment Readiness (État au juin 2026)
 
 | Criterion | Status | Details |
 |-----------|--------|---------|
 | Smart Contract Code | ✅ Complete | 7 contracts + 1 library, v1.0.0 |
-| Test Suite | ✅ 501/501 passing | 17 test files, 100% pass rate |
+| Test Suite | ✅ 512/512 passing | 18 test files, 100% pass rate |
 | Security Audit — Round 1 | ✅ 28/28 fixed | All H/C/M/L findings remediated |
 | Security Audit — Round 2 | ✅ 6/6 fixed | C-1, C-2, H-1, H-2, H-3, H-4 (avril 2026) |
 | Security Audit — Round 3 | ✅ 14/14 fixed | Full-project audit across 5 contracts + scripts + relayer (juin 2026) |
@@ -118,7 +118,7 @@ The OPAL Platform smart contract suite has been **successfully deployed** on Pol
 | Check | Status | Evidence |
 |-------|--------|---------|
 | All contracts compile without errors | ✅ | `npx hardhat compile` → success |
-| All 501 tests pass | ✅ | `npx hardhat test` → 501 passing (~2m) |
+| All 512 tests pass | ✅ | `npx hardhat test` → 512 passing (~2m) |
 | No Solhint warnings (critical) | ✅ | solhint ^6.1.0 configured |
 | Storage gaps in upgradeable contracts | ✅ | __gap[47] (FPC), __gap[45] (GOV) |
 | _disableInitializers() in constructors | ✅ | Both UUPS contracts |
@@ -281,7 +281,7 @@ await multiOracle.registerOracle(oracle4Address, "WASDI-Landsat");
 ### 6.1 Overall Results
 
 ```
-501 passing (~2m)
+512 passing (~2m)
 0 failing
 0 pending
 ```

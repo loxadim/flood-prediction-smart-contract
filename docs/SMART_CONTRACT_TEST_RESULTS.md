@@ -4,7 +4,7 @@
 **Version**: 1.0.0  
 **Framework**: Hardhat 3.x / Mocha / Chai / Ethers.js 6.x  
 **Solidity**: ^0.8.22 (compiled 0.8.28)  
-**Result**: **501 / 501 tests passing (~2m)**
+**Result**: **512 / 512 tests passing (~2m)**
 
 ---
 
@@ -25,16 +25,16 @@
 
 ## 1. Executive Summary
 
-The OPAL Platform smart contract suite achieves **100% test pass rate** across **501 test cases** spread over **17 test files**. Tests cover all 7 production contracts, 1 library, 3 mock contracts, and the off-chain Mobile Money relayer service, validating functional correctness, security properties, access control, edge cases, and batch scalability up to 10,000 beneficiaries.
+The OPAL Platform smart contract suite achieves **100% test pass rate** across **512 test cases** spread over **18 test files**. Tests cover all 7 production contracts, 1 library, 3 mock contracts, and the off-chain Mobile Money relayer service, validating functional correctness, security properties, access control, edge cases, and batch scalability up to 10,000 beneficiaries.
 
 | Metric | Value |
 |--------|-------|
-| Total Tests | 501 |
-| Passing | 501 |
+| Total Tests | 512 |
+| Passing | 512 |
 | Failing | 0 |
 | Pending | 0 |
 | Execution Time | ~2m |
-| Test Files | 16 |
+| Test Files | 18 |
 | Contracts Tested | 7 + 1 library + relayer service |
 | CI/CD | GitHub Actions (build, test, lint, size-check) |
 
@@ -86,12 +86,13 @@ Mocha Timeout: 120,000 ms
 | 9 | AuditV2Fixes.test.js | FloodPredictionContract | 22 | Audit finding regression tests |
 | 10 | AuditFixValidation.test.js | FloodPredictionContract | 17 | Audit Round 2 regression tests |
 | 11 | AuditV3Fixes.test.js | Multiple | 14 | Audit Round 3 regression tests (full-project audit) |
-| 12 | Relayer.test.js | Relayer Service (off-chain) | 9 | Security, rate limiting, anomaly detection, audit logging |
-| 13 | BatchBeneficiaries1000.test.js | FloodPredictionContract | 7 | 1,000 beneficiary scale |
-| 14 | BatchBeneficiaries2000.test.js | FloodPredictionContract | 8 | 2,000 beneficiary scale + gas |
-| 15 | BatchBeneficiaries3000.test.js | FloodPredictionContract | 8 | 3,000 beneficiary scale + gas |
-| 16 | BatchBeneficiaries5000.test.js | FloodPredictionContract | 9 | 5,000 beneficiary scale + gas |
-| 17 | BatchBeneficiaries10000.test.js | FloodPredictionContract | 9 | 10,000 beneficiary scale + gas |
+| 12 | AuditV4Fixes.test.js | Multiple + Relayer | 11 | Audit Round 4 regression tests (full-project audit) |
+| 13 | Relayer.test.js | Relayer Service (off-chain) | 9 | Security, rate limiting, anomaly detection, audit logging |
+| 14 | BatchBeneficiaries1000.test.js | FloodPredictionContract | 7 | 1,000 beneficiary scale |
+| 15 | BatchBeneficiaries2000.test.js | FloodPredictionContract | 8 | 2,000 beneficiary scale + gas |
+| 16 | BatchBeneficiaries3000.test.js | FloodPredictionContract | 8 | 3,000 beneficiary scale + gas |
+| 17 | BatchBeneficiaries5000.test.js | FloodPredictionContract | 9 | 5,000 beneficiary scale + gas |
+| 18 | BatchBeneficiaries10000.test.js | FloodPredictionContract | 9 | 10,000 beneficiary scale + gas |
 
 ### 3.2 Test Categories
 
@@ -105,12 +106,12 @@ pie title Test Distribution by Category
     "Targeting" : 36
     "KYC/AML Compliance" : 84
     "Security" : 17
-    "Audit Regression" : 53
+    "Audit Regression" : 64
     "Relayer Service" : 9
     "Scale Testing" : 41
 ```
 
-> Audit Regression = AuditV2Fixes (22) + AuditFixValidation (17) + AuditV3Fixes (14).
+> Audit Regression = AuditV2Fixes (22) + AuditFixValidation (17) + AuditV3Fixes (14) + AuditV4Fixes (11).
 
 ---
 
@@ -522,6 +523,33 @@ Audit de qualité/sécurité couvrant l'ensemble du projet (7 contrats, service 
 
 > Note : le relayer off-chain tourne en **mode simulation par défaut** tant que les API Orange Money / Wave ne sont pas disponibles (intégration en cours de négociation) ; la chaîne on-chain initiation → confirmation est néanmoins complète et testée.
 
+### 8.5 Audit Round 4 — Audit global du projet (Juillet 2026)
+
+Second audit complet du projet (7 contrats, relayer off-chain, scripts, configuration). 15 findings corrigés, avec tests de régression dans `AuditV4Fixes.test.js` (11 tests). Les 4 findings principaux ont été confirmés par PoC exécutés on-chain avant correction.
+
+> Numérotation A31–A48 (référencée dans les commentaires du code) — indépendante du « A31 » script du tableau Round 3.
+
+| Finding | Sévérité | Description | Correction | Tests |
+|---------|----------|-------------|------------|-------|
+| A40 | High | Relayer en mode production : un provider sans apiUrl/apiKey retournait un **faux succès** `X-SIM-...` → `confirmPayment` on-chain pour un paiement jamais exécuté | Échec explicite `PROVIDER_NOT_CONFIGURED` + event sécurité ; la simulation ne passe que par `SIMULATE_PAYMENTS` | AuditV4Fixes.test.js |
+| A31 | Medium | Budget engagé (`committedBudget`) jamais libéré quand un trigger atteint PAID en dépensant moins que son `totalAmount` (cancelTrigger refuse PAID) → capacité budgétaire régionale réduite à perpétuité | Libération du reliquat au passage PAID + `BudgetCommitmentReleased` | AuditV4Fixes.test.js |
+| A32 | Medium | `raiseFraudAlert`/`recordScreening` revert (`BeneficiaryAlreadySuspended`) sur bénéficiaire déjà suspendu → piste d'audit fraude/sanctions perdue | Suspension sautée (pas le enregistrement) si déjà SUSPENDED | AuditV4Fixes.test.js |
+| A41 | Medium | `_sendConfirm`/`_sendFail` avalaient les erreurs de tx → paiement mobile exécuté mais PENDING on-chain jusqu'à expiration | 3 tentatives avec backoff + INCIDENT durable dans le log d'audit pour réconciliation manuelle | (relayer) |
+| A42 | Medium | Le relayer n'écoutait pas `PaymentRetried` → un paiement relancé n'était jamais exécuté et ré-expirait | Abonnement `PaymentRetried` + résolution via `getPayment()` | (relayer) |
+| A33 | Low | Chemin SANCTIONED d'`approveAttestation` sans `statusBeforeSuspension` (reinstate → NOT_VERIFIED au lieu de PENDING) ni riskLevel persisté | Passage par `_suspendBeneficiary` + persistance du riskLevel SANCTIONED | AuditV4Fixes.test.js |
+| A36 | Low | `validateTrigger` sans `whenNotPaused` (incohérent avec les autres flux opérateur) | Modificateur ajouté | AuditV4Fixes.test.js |
+| A34 | Low | Commentaire FPC inexact : `markVerified` (JT) ne prévient PAS le double paiement inter-triggers (`_verified` jamais lu on-chain) | Documentation corrigée (dédup réelle = `paymentRecords` par eventId) | (doc) |
+| A35 | Low | Restriction `onlyAuthorized` sur `isCompliant` contournable (`attestations` public ; état on-chain lisible de toute façon) | Documenté comme défense en profondeur uniquement | (doc) |
+| A43 | Low | `fetch({ timeout })` inopérant (undici ignore l'option) → aucun timeout réel sur les API providers | `AbortSignal.timeout(20000)` sur les 4 adapters | (relayer) |
+| A44 | Low | `validateWebhookSignature` : `timingSafeEqual` lève une exception sur longueurs différentes | Retourne `false` sur signature malformée | AuditV4Fixes.test.js |
+| A37 | Info | `rejectedCount` jamais décrémenté à la re-soumission d'un REJECTED (dérive des stats) | Décrément à la re-soumission | AuditV4Fixes.test.js |
+| A45 | Info | `X-Request-ID` Orange non idempotent entre retries (Date.now()) ; stats anomalies cumulées à vie | Clé = paymentId ; reset des stats par fenêtre horaire | (relayer) |
+| A46 | Info | `relayer/beneficiaries.json` (PII téléphones) tracké dans git (placeholders) | Fichier runtime git-ignoré ; template `beneficiaries.example.json` conservé | (config) |
+| A47 | Info | Déploiement avec 1 seul oracle (< MIN_ORACLE_COUNT=4) → consensus injoignable, chemin cold-start permanent | Support `ORACLE_ADDRESSES` + avertissement explicite au déploiement | (scripts) |
+| A48 | Info | `initialize` gouvernance acceptait un quorum > MAX_ACTORS (propositions à jamais inexécutables) | Borne `MAX_ACTORS` sur le quorum initial | AuditV4Fixes.test.js |
+| A38 | Info | Mode mixte commit-reveal / soumission directe (MultiOracle) : commit orphelin possible si le round avance | Limitation documentée — standardiser un seul mode par déploiement | (doc) |
+| A39 | Info | `phoneHash` non lié à la feuille Merkle (destination contrôlée par l'OPERATOR) | Hypothèse de confiance documentée (le relayer résout le MSISDN via son propre registre) | (doc) |
+
 ---
 
 ## 9. Code Coverage Summary
@@ -582,12 +610,13 @@ Audit de qualité/sécurité couvrant l'ensemble du projet (7 contrats, service 
 ## Appendix A — Full Test Output Summary
 
 ```
-501 passing (~2m)
+512 passing (~2m)
 
 Test Suites:
   ✅ AuditFixValidation.test.js      — 17 tests
   ✅ AuditV2Fixes.test.js             — 22 tests
   ✅ AuditV3Fixes.test.js             — 14 tests
+  ✅ AuditV4Fixes.test.js             — 11 tests
   ✅ BatchBeneficiaries1000.test.js   —  7 tests
   ✅ BatchBeneficiaries2000.test.js   —  8 tests
   ✅ BatchBeneficiaries3000.test.js   —  8 tests
@@ -603,9 +632,9 @@ Test Suites:
   ✅ SecurityFixes.test.js            — 17 tests
   ✅ WASDIOracleConnector.test.js     — 42 tests
   ─────────────────────────────────────────────
-  Total: 501 passing | 0 failing | 0 pending
+  Total: 512 passing | 0 failing | 0 pending
 ```
 
 ---
 
-*Document généré à partir d'une exécution de tests live sur Hardhat 3.x EDR — mis à jour Juin 2026 (post-Audit Round 3 / Relayer)*
+*Document généré à partir d'une exécution de tests live sur Hardhat 3.x EDR — mis à jour Juillet 2026 (post-Audit Round 4)*

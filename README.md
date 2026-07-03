@@ -105,7 +105,7 @@ npx hardhat build
 ### Test
 
 ```bash
-# Full test suite (501 tests)
+# Full test suite (512 tests)
 npx hardhat test
 
 # With gas report
