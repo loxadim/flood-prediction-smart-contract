@@ -198,6 +198,11 @@ contract KYCAMLCompliance is IKYCAMLCompliance, Ownable2Step {
         if (verifiedButExpired) {
             approvedCount--;
         }
+        // A37 fix: a REJECTED beneficiary re-submitting stops being counted as rejected —
+        // mirrors the approvedCount adjustment above so getComplianceStats() stays accurate.
+        if (existing.status == VerificationStatus.REJECTED) {
+            rejectedCount--;
+        }
         // A SUSPENDED beneficiary must go through reinstateBeneficiary(), not
         // a fresh attestation that would silently reset their status to PENDING.
         if (existing.status == VerificationStatus.SUSPENDED) {
@@ -242,11 +247,13 @@ contract KYCAMLCompliance is IKYCAMLCompliance, Ownable2Step {
         if (validityPeriod == 0) validityPeriod = defaultValidityPeriod;
         if (validityPeriod > maxValidityPeriod) revert InvalidValidityPeriod();
         
-        // Sanctioned beneficiaries cannot be approved
+        // Sanctioned beneficiaries cannot be approved.
+        // A33 fix: route through _suspendBeneficiary so statusBeforeSuspension is recorded
+        // (previously reinstateBeneficiary landed on NOT_VERIFIED instead of PENDING) and
+        // persist the SANCTIONED risk level on the attestation for the audit trail.
         if (riskLevel == RiskLevel.SANCTIONED) {
-            attestation.status = VerificationStatus.SUSPENDED;
-            suspendedCount++;
-            emit BeneficiarySuspended(beneficiaryHash, "Sanctioned entity");
+            attestation.riskLevel = RiskLevel.SANCTIONED;
+            _suspendBeneficiary(beneficiaryHash, "Sanctioned entity");
             return;
         }
         
@@ -292,11 +299,16 @@ contract KYCAMLCompliance is IKYCAMLCompliance, Ownable2Step {
         if (beneficiaryHash == bytes32(0)) revert InvalidBeneficiaryHash();
         
         screenings[beneficiaryHash] = result;
-        
+
         emit ScreeningRecorded(beneficiaryHash, result.isCleared, result.screeningProvider);
-        
-        // Auto-suspend if sanctions match found
-        if (!result.isCleared && result.sanctionsChecked) {
+
+        // Auto-suspend if sanctions match found.
+        // A32 fix: skip the suspension (not the recording) when already suspended —
+        // _suspendBeneficiary reverts on SUSPENDED, which previously rolled back the
+        // whole tx and made it impossible to record a screening result for an
+        // already-suspended beneficiary.
+        if (!result.isCleared && result.sanctionsChecked &&
+            attestations[beneficiaryHash].status != VerificationStatus.SUSPENDED) {
             _suspendBeneficiary(beneficiaryHash, "Sanctions match detected");
         }
     }
@@ -358,11 +370,15 @@ contract KYCAMLCompliance is IKYCAMLCompliance, Ownable2Step {
         string calldata alertType
     ) external onlyComplianceOfficer {
         fraudAlertCount[beneficiaryHash]++;
-        
+
         emit FraudAlertRaised(beneficiaryHash, alertType, block.timestamp);
-        
-        // Auto-suspend after threshold
-        if (fraudAlertCount[beneficiaryHash] >= fraudThreshold) {
+
+        // Auto-suspend after threshold.
+        // A32 fix: only suspend if not already suspended — otherwise the revert in
+        // _suspendBeneficiary erased the alert itself, blocking the on-chain fraud
+        // audit trail for any beneficiary past the threshold.
+        if (fraudAlertCount[beneficiaryHash] >= fraudThreshold &&
+            attestations[beneficiaryHash].status != VerificationStatus.SUSPENDED) {
             _suspendBeneficiary(beneficiaryHash, "Fraud threshold exceeded");
         }
     }
@@ -375,7 +391,11 @@ contract KYCAMLCompliance is IKYCAMLCompliance, Ownable2Step {
      * @dev Check if a beneficiary is compliant for receiving payments
      * @param beneficiaryHash Hash of the beneficiary
      * @return bool True if verified + not expired + cleared sanctions
-     * H9-KYC fix: restricted to owner and authorized contracts (RGPD — compliance status is sensitive)
+     * H9-KYC fix: restricted to owner and authorized contracts.
+     * A35 note: this restriction is defense-in-depth for contract callers only — attestation
+     * data is public on-chain regardless (the `attestations` mapping has a public getter and
+     * raw storage is world-readable). Privacy comes from storing only hashes, never from
+     * view-function access control.
      */
     function isCompliant(bytes32 beneficiaryHash) external view override onlyAuthorized returns (bool) {
         return _isCompliant(beneficiaryHash);

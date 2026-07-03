@@ -429,7 +429,9 @@ contract FloodPredictionContract is
      * @dev Validate a trigger (confirm payment readiness)
      * @param eventId Event to validate
      */
-    function validateTrigger(string calldata eventId) external onlyRole(OPERATOR_ROLE) {
+    // A36 fix: whenNotPaused added — every other operator flow (create/process/retry)
+    // is pause-gated; validation must not advance a trigger while the contract is paused.
+    function validateTrigger(string calldata eventId) external onlyRole(OPERATOR_ROLE) whenNotPaused {
         FloodTrigger storage trigger = triggers[eventId];
         if (trigger.timestamp == 0) revert TriggerNotFound();
         if (trigger.status != TriggerStatus.ACTIVE) revert TriggerNotActive();
@@ -551,6 +553,12 @@ contract FloodPredictionContract is
     /**
      * @dev Internal: verify Merkle proofs, record payments, update budget,
      *      call MobileMoneyProvider.batchInitiatePayments(), and track multi-batch progress.
+     *
+     * A39 note (trust assumption): the Merkle leaf commits to (beneficiaryHash, amount)
+     * only — phoneHashes and providers are supplied freely by the OPERATOR_ROLE caller
+     * and are NOT bound to the beneficiary list. The payout destination therefore relies
+     * on operator honesty; off-chain, the relayer resolves the actual MSISDN from its own
+     * registry keyed by beneficiaryHash, which mitigates (but does not remove) this.
      */
     function _processAndInitiateMobileMoney(
         string memory eventId,
@@ -631,8 +639,10 @@ contract FloodPredictionContract is
                 verified: true
             });
 
-            // H-01 fix: mark beneficiary as paid in JokalanteTargeting to prevent double-payment
-            // across batches or trigger restarts.
+            // A34 fix (doc): record the payout in JokalanteTargeting for off-chain visibility
+            // and statistics only. Double-payment prevention is enforced by paymentRecords
+            // (per eventId) above — _verified is NOT consulted by any on-chain check, so a
+            // beneficiary legitimately remains payable across distinct flood events.
             if (jokalanteTargeting != address(0)) {
                 IJokalanteTargeting(jokalanteTargeting).markVerified(trigger.region, beneficiaryHashes[i]);
             }
@@ -668,6 +678,23 @@ contract FloodPredictionContract is
         if (triggerPaidCount[eventId] >= trigger.beneficiaryCount) {
             trigger.status = TriggerStatus.PAID;
             trigger.paidAt = block.timestamp;
+
+            // A31 fix: release any leftover committed budget. When actual per-beneficiary
+            // amounts sum to less than the totalAmount declared at trigger creation, the
+            // difference would otherwise stay in committedBudget forever — cancelTrigger
+            // rejects PAID triggers, so there was no release path and the region's
+            // available budget shrank permanently.
+            uint256 spent = triggerSpentAmount[eventId];
+            uint256 leftover = trigger.totalAmount > spent ? trigger.totalAmount - spent : 0;
+            if (leftover > 0) {
+                uint256 releasable = committedBudget[trigger.region] >= leftover
+                    ? leftover
+                    : committedBudget[trigger.region];
+                if (releasable > 0) {
+                    committedBudget[trigger.region] -= releasable;
+                    emit BudgetCommitmentReleased(trigger.region, releasable, eventId);
+                }
+            }
         }
 
         emit BatchPaymentProcessed(eventId, validCount, totalBatch, block.timestamp);

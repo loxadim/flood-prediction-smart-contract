@@ -409,6 +409,14 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
      * After verification, the data is recorded exactly as in the original
      * `submitData` flow and consensus is triggered if the threshold is met.
      *
+     * A38 note (documented limitation): commit-reveal and direct submitData can be
+     * mixed in the same round. A direct submission that advances the round between
+     * an oracle's commit and its reveal orphans the commitment (NoCommitmentFound),
+     * and an unrevealed commit blocks re-committing until the round advances via
+     * staleness. Operators should standardize on ONE submission mode per deployment;
+     * commit-reveal is the recommended mode when front-running between oracles is a
+     * concern.
+     *
      * @param region     The geographic region identifier.
      * @param riskScore  The flood risk score in [0, 100].
      * @param dataSource The data source name.

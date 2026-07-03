@@ -10,10 +10,14 @@ export function validateWebhookSignature(payload, signature, secret) {
     .update(JSON.stringify(payload))
     .digest('hex');
 
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(`sha256=${expectedSignature}`)
-  );
+  // A44 fix: timingSafeEqual throws on length mismatch — a malformed signature
+  // must yield `false`, not an uncaught exception in the webhook handler.
+  const provided = Buffer.from(String(signature));
+  const expected = Buffer.from(`sha256=${expectedSignature}`);
+  if (provided.length !== expected.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(provided, expected);
 }
 
 /**

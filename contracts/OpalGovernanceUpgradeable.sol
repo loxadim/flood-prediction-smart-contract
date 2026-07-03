@@ -152,7 +152,10 @@ contract OpalGovernanceUpgradeable is
     ) public initializer {
         __Ownable_init(initialOwner);
 
-        if (initialQuorum < MIN_QUORUM) revert InvalidQuorum();
+        // A48 fix: bound the initial quorum by MAX_ACTORS — a quorum that can never be
+        // met (more signatures than actors can ever exist) would render every proposal
+        // permanently unexecutable with no recovery other than an upgrade.
+        if (initialQuorum < MIN_QUORUM || initialQuorum > MAX_ACTORS) revert InvalidQuorum();
         quorum = initialQuorum;
         executionGasLimit = 500_000; // default 500K
 

@@ -410,16 +410,39 @@ console.log(`  PAUSER_ROLE:   ${pauserAddress}`);
         logStep("⏭️", "OpalGovernance already configured — skipping");
     }
 
-    // Register deployer as oracle in MultiOracle
+    // Register oracles in MultiOracle.
+    // A47 fix: consensus requires MIN_ORACLE_COUNT (4) active oracles — with only the
+    // deployer registered, isConsensusReached() can never become true and every trigger
+    // runs through the cold-start path (operator-supplied score, no oracle cross-check).
+    // Additional oracle signer addresses can be provided via ORACLE_ADDRESSES
+    // (comma-separated). A warning is printed when the count stays below the minimum.
     if (!steps.oracleRegistered) {
-        logStep("🔧", "Registering deployer as oracle...");
+        logStep("🔧", "Registering oracles...");
         const tx = await multiOracle.registerOracle(deployer.address, "Deployer Oracle");
         await tx.wait();
+        logStep("  ✅", "Deployer registered as oracle (active by default)");
+
+        const extraOracles = (process.env.ORACLE_ADDRESSES || "")
+            .split(",").map(a => a.trim()).filter(Boolean);
+        for (const [i, addr] of extraOracles.entries()) {
+            if (!ethers.isAddress(addr)) throw new Error(`ORACLE_ADDRESSES[${i}]="${addr}" is not a valid address`);
+            const txi = await multiOracle.registerOracle(addr, `Oracle-${i + 1}`);
+            await txi.wait();
+            logStep("  ✅", `Oracle registered: ${addr}`);
+        }
+
+        const activeCount = await multiOracle.getActiveOracleCount();
+        const minCount = await multiOracle.MIN_ORACLE_COUNT();
+        if (activeCount < minCount) {
+            logStep("⚠️", `Only ${activeCount}/${minCount} active oracles — consensus is UNREACHABLE.`);
+            logStep("⚠️", "Triggers will rely on the cold-start path (no oracle cross-check).");
+            logStep("⚠️", "Register more oracles (multiOracle.registerOracle) before production use.");
+        }
+
         steps.oracleRegistered = true;
         saveProgress(progress);
-        logStep("✅", "Deployer registered as oracle (active by default)");
     } else {
-        logStep("⏭️", "Oracle already registered — skipping");
+        logStep("⏭️", "Oracles already registered — skipping");
     }
 
     // ----------------------------------------

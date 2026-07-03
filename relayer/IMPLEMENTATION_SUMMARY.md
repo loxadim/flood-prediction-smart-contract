@@ -72,7 +72,7 @@ relayer/
 ├── DEPLOYMENT.md                 # Production deployment
 ├── .env.example                  # Environment template
 ├── .gitignore                    # Git ignore rules
-├── beneficiaries.json            # Beneficiary registry (example)
+├── beneficiaries.json            # Beneficiary registry (runtime, git-ignored — PII)
 ├── beneficiaries.example.json    # Beneficiary template
 ├── sample-satellite.json         # Satellite submission example
 ├── sample-batch-payments.json    # Batch payment example

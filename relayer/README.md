@@ -87,7 +87,7 @@ WAVE_API_KEY=your-api-key
 
 ### 4. Provide beneficiary metadata
 
-Edit `relayer/beneficiaries.json`:
+Copy `relayer/beneficiaries.example.json` to `relayer/beneficiaries.json` (git-ignored — it contains PII) and edit it:
 
 ```json
 {
@@ -192,7 +192,7 @@ grep PAYMENT_REQUEST relayer/logs/audit-*.log
 
 1. Update provider URLs in `.env`
 2. Implement the provider API contract in `relayer/providers.js` (adapters are pre-built)
-3. Add real beneficiary metadata to `relayer/beneficiaries.json`
+3. Add real beneficiary metadata to `relayer/beneficiaries.json` (git-ignored; never commit real phone numbers)
 4. Set `SIMULATE_PAYMENTS=false` to enable real API calls
 5. Test with a small batch before going to production
 6. Monitor `relayer/logs/audit-*.log` for failures

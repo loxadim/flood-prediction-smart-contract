@@ -11,6 +11,10 @@ typechain-types/
 .env.*
 !.env.example
 
+# Beneficiary registry contains PII (phone numbers) — never commit the real file.
+# Use relayer/beneficiaries.example.json as the tracked template. (A46 fix)
+relayer/beneficiaries.json
+
 # Deployment manifests (contain addresses, not secrets, but keep local)
 deployment-*.json
 

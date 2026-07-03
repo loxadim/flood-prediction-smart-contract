@@ -28,8 +28,15 @@ class OrangeMoneyAdapter {
   }
 
   async execute(paymentRequest) {
-    if (!this.apiUrl || !this.apiKey) {
-      return { success: true, transactionRef: `ORANGE-SIM-${Date.now()}` };
+    // A40 fix: in production mode (simulatePayments=false) an unconfigured provider
+    // must FAIL the payment, never fake a success — the previous `X-SIM` fallback
+    // confirmed payments on-chain that were never executed off-chain.
+    if (!this.apiUrl || !this.apiKey || !this.merchantId) {
+      await auditLogger.logSecurityEvent(
+        'PROVIDER_NOT_CONFIGURED', 'ERROR',
+        'Orange Money adapter called in production mode without full configuration'
+      );
+      return { success: false, reason: 'PROVIDER_NOT_CONFIGURED' };
     }
 
     if (rateLimitTracker.isRateLimited('ORANGE_MONEY', 100, 60000)) {
@@ -50,7 +57,9 @@ class OrangeMoneyAdapter {
     const headers = {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${this.apiKey}`,
-      'X-Request-ID': `${paymentRequest.paymentId}-${Date.now()}`,
+      // A45 fix: keyed on paymentId alone — appending Date.now() made every retry a
+      // new request for Orange's dedup, allowing duplicate disbursements on retry.
+      'X-Request-ID': paymentRequest.paymentId,
     };
 
     try {
@@ -58,7 +67,7 @@ class OrangeMoneyAdapter {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
-        timeout: 20000,
+        signal: AbortSignal.timeout(20000), // A43 fix: undici fetch ignores the 'timeout' option
       });
 
       await auditLogger.logAuthAttempt('ORANGE_MONEY', response.ok, response.status);
@@ -108,8 +117,13 @@ class WaveAdapter {
   }
 
   async execute(paymentRequest) {
+    // A40 fix: never fake a success when unconfigured in production mode.
     if (!this.apiUrl || !this.apiKey) {
-      return { success: true, transactionRef: `WAVE-SIM-${Date.now()}` };
+      await auditLogger.logSecurityEvent(
+        'PROVIDER_NOT_CONFIGURED', 'ERROR',
+        'Wave adapter called in production mode without full configuration'
+      );
+      return { success: false, reason: 'PROVIDER_NOT_CONFIGURED' };
     }
 
     if (rateLimitTracker.isRateLimited('WAVE', 100, 60000)) {
@@ -141,7 +155,7 @@ class WaveAdapter {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
-        timeout: 20000,
+        signal: AbortSignal.timeout(20000), // A43 fix: undici fetch ignores the 'timeout' option
       });
 
       await auditLogger.logAuthAttempt('WAVE', response.ok, response.status);
@@ -190,8 +204,13 @@ class FreeMoneyAdapter {
   }
 
   async execute(paymentRequest) {
+    // A40 fix: never fake a success when unconfigured in production mode.
     if (!this.apiUrl || !this.apiKey) {
-      return { success: true, transactionRef: `FREEMONEY-SIM-${Date.now()}` };
+      await auditLogger.logSecurityEvent(
+        'PROVIDER_NOT_CONFIGURED', 'ERROR',
+        'Free Money adapter called in production mode without full configuration'
+      );
+      return { success: false, reason: 'PROVIDER_NOT_CONFIGURED' };
     }
 
     if (rateLimitTracker.isRateLimited('FREE_MONEY', 100, 60000)) {
@@ -216,7 +235,7 @@ class FreeMoneyAdapter {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
-        timeout: 20000,
+        signal: AbortSignal.timeout(20000), // A43 fix: undici fetch ignores the 'timeout' option
       });
 
       await auditLogger.logAuthAttempt('FREE_MONEY', response.ok, response.status);
@@ -261,8 +280,13 @@ class EmoneyAdapter {
   }
 
   async execute(paymentRequest) {
+    // A40 fix: never fake a success when unconfigured in production mode.
     if (!this.apiUrl || !this.apiKey) {
-      return { success: true, transactionRef: `EMONEY-SIM-${Date.now()}` };
+      await auditLogger.logSecurityEvent(
+        'PROVIDER_NOT_CONFIGURED', 'ERROR',
+        'E-Money adapter called in production mode without full configuration'
+      );
+      return { success: false, reason: 'PROVIDER_NOT_CONFIGURED' };
     }
 
     if (rateLimitTracker.isRateLimited('EMONEY', 100, 60000)) {
@@ -287,7 +311,7 @@ class EmoneyAdapter {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
-        timeout: 20000,
+        signal: AbortSignal.timeout(20000), // A43 fix: undici fetch ignores the 'timeout' option
       });
 
       await auditLogger.logAuthAttempt('EMONEY', response.ok, response.status);
