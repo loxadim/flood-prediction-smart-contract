@@ -30,7 +30,14 @@ function buildLeaf(beneficiaryHash, amount) {
 
 console.log("\n=== OPAL Platform - Stress Test (1000 beneficiaries) ===\n");
 
-const [admin, operator] = await ethers.getSigners();
+// V-02: FloodPredictionContract.initialize enforces four DISTINCT role addresses
+// (RolesNotDistinct) — the in-process Hardhat network provides 20 unlocked signers.
+const [admin, operator, upgrader, pauser] = await ethers.getSigners();
+if (!pauser) {
+    console.error("Ce script requiert au moins 4 comptes (admin/operator/upgrader/pauser distincts).");
+    console.error("Lancez-le sur le réseau in-process : npx hardhat run scripts/stress-test-1000.js");
+    process.exit(1);
+}
 
 console.log("[1/6] Deploying contracts...");
 const MultiOracle = await ethers.getContractFactory("MultiOracle");
@@ -53,8 +60,8 @@ const FloodPred = await ethers.getContractFactory("FloodPredictionContract");
 const flood = await ozUpgrades.deployProxy(FloodPred, [
     admin.address,
     operator.address,
-    operator.address,
-    operator.address,
+    upgrader.address,
+    pauser.address,
 ], { kind: "uups" });
 await flood.waitForDeployment();
 
@@ -125,13 +132,10 @@ const triggerTx = await flood.connect(operator).createFloodTrigger(
     totalPaymentAmount,
     BENEFICIARY_COUNT
 );
-const triggerReceipt = await triggerTx.wait();
-const createdEvent = triggerReceipt.logs
-    .map((log) => {
-        try { return flood.interface.parseLog(log); } catch { return null; }
-    })
-    .find((event) => event?.name === "FloodTriggerCreated");
-const eventId = createdEvent.args.eventId;
+await triggerTx.wait();
+// FloodTriggerCreated declares `string indexed eventId` — the log only carries its
+// keccak hash (ethers Indexed object), not the string. Read the real stored ID.
+const eventId = await flood.triggerIds(Number(await flood.triggerCount()) - 1);
 await (await flood.connect(operator).validateTrigger(eventId)).wait();
 
 let paymentCount = 0;
