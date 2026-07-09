@@ -88,18 +88,18 @@ contract FloodPredictionContract is
     // ============================================
 
     // Trigger storage
-    mapping(string => FloodTrigger) public triggers;
+    mapping(string => FloodTrigger) private triggers; // read via getFloodTrigger() — auto-getter removed to save bytecode (EIP-170 headroom)
     string[] public triggerIds;
     uint256 public triggerCount;
 
     // Budget management
-    mapping(string => BudgetAllocation) public budgets;
+    mapping(string => BudgetAllocation) private budgets; // read via getRegionBudget()
     string[] public budgetRegions;
     uint256 public totalBudgetAllocated;
     uint256 public totalBudgetSpent;
 
     // Payment tracking
-    mapping(bytes32 => PaymentRecord) public paymentRecords;
+    mapping(bytes32 => PaymentRecord) private paymentRecords; // read via getPaymentRecord()
     uint256 public totalPaymentsProcessed;
     uint256 public totalAmountDisbursed;
 

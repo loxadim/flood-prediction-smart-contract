@@ -26,7 +26,7 @@ export declare namespace FloodPredictionContract {
     }
 
   export interface FloodPredictionContractInterface extends Interface {
-    getFunction(nameOrSignature: "ADMIN_ROLE" | "COOLDOWN_CRITICAL" | "COOLDOWN_HIGH" | "COOLDOWN_NORMAL" | "DEFAULT_ADMIN_ROLE" | "DEFAULT_RISK_THRESHOLD" | "GOVERNANCE_RISK_THRESHOLD" | "MAX_BATCH_SIZE" | "MAX_PAYMENT_AMOUNT" | "MAX_REGION_LENGTH" | "MAX_RISK_SCORE" | "MAX_STRING_LENGTH" | "MIN_PAYMENT_AMOUNT" | "OPERATOR_ROLE" | "PAUSER_ROLE" | "UPGRADER_ROLE" | "UPGRADE_INTERFACE_VERSION" | "VERSION" | "activateEmergencyMode" | "allocateBudget" | "budgetRegions" | "budgets" | "cancelTrigger" | "committedBudget" | "createFloodTrigger" | "createGovernanceOverrideTrigger" | "deactivateBudget" | "deactivateEmergencyMode" | "emergencyMode" | "getBudgetRegionsPaginated" | "getCooldownRemaining" | "getFloodTrigger" | "getPaymentRecord" | "getRegionBudget" | "getRegionBudgetRemaining" | "getRoleAdmin" | "getSystemStats" | "getTriggerIds" | "getTriggerIdsPaginated" | "getVersion" | "globalNonce" | "governance" | "grantRole" | "hasRole" | "initialize" | "isBeneficiaryPaid" | "jokalanteTargeting" | "kycCompliance" | "lastTriggerTimestamp" | "mobileMoneyDispatched" | "mobileMoneyProvider" | "multiOracle" | "oracleTolerance" | "pause" | "paused" | "paymentRecords" | "processBatchPayment" | "proxiableUUID" | "regionEmergency" | "regionNonces" | "renounceRole" | "retryMobileMoneyDispatch" | "revokeRole" | "riskThreshold" | "setContractAddresses" | "setOracleTolerance" | "setRegionEmergency" | "supportsInterface" | "totalAmountDisbursed" | "totalBudgetAllocated" | "totalBudgetSpent" | "totalPaymentsProcessed" | "triggerCount" | "triggerIds" | "triggerPaidCount" | "triggerSpentAmount" | "triggers" | "unpause" | "updateRiskThreshold" | "upgradeToAndCall" | "validateAndProcessPayments" | "validateTrigger"): FunctionFragment;
+    getFunction(nameOrSignature: "ADMIN_ROLE" | "COOLDOWN_CRITICAL" | "COOLDOWN_HIGH" | "COOLDOWN_NORMAL" | "DEFAULT_ADMIN_ROLE" | "DEFAULT_RISK_THRESHOLD" | "GOVERNANCE_RISK_THRESHOLD" | "MAX_BATCH_SIZE" | "MAX_PAYMENT_AMOUNT" | "MAX_REGION_LENGTH" | "MAX_RISK_SCORE" | "MAX_STRING_LENGTH" | "MIN_PAYMENT_AMOUNT" | "OPERATOR_ROLE" | "PAUSER_ROLE" | "UPGRADER_ROLE" | "UPGRADE_INTERFACE_VERSION" | "VERSION" | "activateEmergencyMode" | "allocateBudget" | "budgetRegions" | "cancelTrigger" | "committedBudget" | "createFloodTrigger" | "createGovernanceOverrideTrigger" | "deactivateBudget" | "deactivateEmergencyMode" | "emergencyMode" | "getBudgetRegionsPaginated" | "getCooldownRemaining" | "getFloodTrigger" | "getPaymentRecord" | "getRegionBudget" | "getRegionBudgetRemaining" | "getRoleAdmin" | "getSystemStats" | "getTriggerIds" | "getTriggerIdsPaginated" | "getVersion" | "globalNonce" | "governance" | "grantRole" | "hasRole" | "initialize" | "isBeneficiaryPaid" | "jokalanteTargeting" | "kycCompliance" | "lastTriggerTimestamp" | "mobileMoneyDispatched" | "mobileMoneyProvider" | "multiOracle" | "oracleTolerance" | "pause" | "paused" | "processBatchPayment" | "proxiableUUID" | "regionEmergency" | "regionNonces" | "renounceRole" | "retryMobileMoneyDispatch" | "revokeRole" | "riskThreshold" | "setContractAddresses" | "setOracleTolerance" | "setRegionEmergency" | "supportsInterface" | "totalAmountDisbursed" | "totalBudgetAllocated" | "totalBudgetSpent" | "totalPaymentsProcessed" | "triggerCount" | "triggerIds" | "triggerPaidCount" | "triggerSpentAmount" | "unpause" | "updateRiskThreshold" | "upgradeToAndCall" | "validateAndProcessPayments" | "validateTrigger"): FunctionFragment;
 
     getEvent(nameOrSignatureOrTopic: "BatchPaymentProcessed" | "BudgetAllocated" | "BudgetCommitmentReleased" | "BudgetCommitted" | "BudgetDeactivated" | "BudgetSpent" | "ContractAddressUpdated" | "EmergencyModeActivated" | "EmergencyModeDeactivated" | "FloodTriggerCreated" | "GovernanceOverride" | "Initialized" | "KYCBeneficiarySkipped" | "MobileMoneyDispatchRetried" | "MobileMoneyPaymentsFailed" | "MobileMoneyPaymentsInitiated" | "OracleToleranceUpdated" | "Paused" | "RegionEmergencySet" | "RiskThresholdUpdated" | "RoleAdminChanged" | "RoleGranted" | "RoleRevoked" | "SinglePaymentProcessed" | "TriggerCancelled" | "TriggerValidated" | "Unpaused" | "Upgraded"): EventFragment;
 
@@ -51,7 +51,6 @@ encodeFunctionData(functionFragment: 'VERSION', values?: undefined): string;
 encodeFunctionData(functionFragment: 'activateEmergencyMode', values: [string]): string;
 encodeFunctionData(functionFragment: 'allocateBudget', values: [string, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'budgetRegions', values: [BigNumberish]): string;
-encodeFunctionData(functionFragment: 'budgets', values: [string]): string;
 encodeFunctionData(functionFragment: 'cancelTrigger', values: [string, string]): string;
 encodeFunctionData(functionFragment: 'committedBudget', values: [string]): string;
 encodeFunctionData(functionFragment: 'createFloodTrigger', values: [string, BigNumberish, BytesLike, BigNumberish, BigNumberish]): string;
@@ -85,7 +84,6 @@ encodeFunctionData(functionFragment: 'multiOracle', values?: undefined): string;
 encodeFunctionData(functionFragment: 'oracleTolerance', values?: undefined): string;
 encodeFunctionData(functionFragment: 'pause', values?: undefined): string;
 encodeFunctionData(functionFragment: 'paused', values?: undefined): string;
-encodeFunctionData(functionFragment: 'paymentRecords', values: [BytesLike]): string;
 encodeFunctionData(functionFragment: 'processBatchPayment', values: [string, BytesLike[], BigNumberish[], BytesLike[][], BytesLike[], BigNumberish[]]): string;
 encodeFunctionData(functionFragment: 'proxiableUUID', values?: undefined): string;
 encodeFunctionData(functionFragment: 'regionEmergency', values: [string]): string;
@@ -106,7 +104,6 @@ encodeFunctionData(functionFragment: 'triggerCount', values?: undefined): string
 encodeFunctionData(functionFragment: 'triggerIds', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'triggerPaidCount', values: [string]): string;
 encodeFunctionData(functionFragment: 'triggerSpentAmount', values: [string]): string;
-encodeFunctionData(functionFragment: 'triggers', values: [string]): string;
 encodeFunctionData(functionFragment: 'unpause', values?: undefined): string;
 encodeFunctionData(functionFragment: 'updateRiskThreshold', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'upgradeToAndCall', values: [AddressLike, BytesLike]): string;
@@ -134,7 +131,6 @@ decodeFunctionResult(functionFragment: 'VERSION', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'activateEmergencyMode', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'allocateBudget', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'budgetRegions', data: BytesLike): Result;
-decodeFunctionResult(functionFragment: 'budgets', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'cancelTrigger', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'committedBudget', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'createFloodTrigger', data: BytesLike): Result;
@@ -168,7 +164,6 @@ decodeFunctionResult(functionFragment: 'multiOracle', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'oracleTolerance', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'pause', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'paused', data: BytesLike): Result;
-decodeFunctionResult(functionFragment: 'paymentRecords', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'processBatchPayment', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'proxiableUUID', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'regionEmergency', data: BytesLike): Result;
@@ -189,7 +184,6 @@ decodeFunctionResult(functionFragment: 'triggerCount', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'triggerIds', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'triggerPaidCount', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'triggerSpentAmount', data: BytesLike): Result;
-decodeFunctionResult(functionFragment: 'triggers', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'unpause', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'updateRiskThreshold', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'upgradeToAndCall', data: BytesLike): Result;
@@ -736,14 +730,6 @@ decodeFunctionResult(functionFragment: 'validateTrigger', data: BytesLike): Resu
     
 
     
-    budgets: TypedContractMethod<
-      [arg0: string, ],
-      [[string, bigint, bigint, bigint, boolean] & {region: string, allocatedAmount: bigint, spentAmount: bigint, lastUpdated: bigint, isActive: boolean }],
-      'view'
-    >
-    
-
-    
     cancelTrigger: TypedContractMethod<
       [eventId: string, reason: string, ],
       [void],
@@ -1008,14 +994,6 @@ decodeFunctionResult(functionFragment: 'validateTrigger', data: BytesLike): Resu
     
 
     
-    paymentRecords: TypedContractMethod<
-      [arg0: BytesLike, ],
-      [[string, bigint, bigint, string, boolean] & {beneficiaryHash: string, amount: bigint, paidAt: bigint, eventId: string, verified: boolean }],
-      'view'
-    >
-    
-
-    
     processBatchPayment: TypedContractMethod<
       [eventId: string, beneficiaryHashes: BytesLike[], amounts: BigNumberish[], merkleProofs: BytesLike[][], phoneHashes: BytesLike[], providers: BigNumberish[], ],
       [void],
@@ -1176,14 +1154,6 @@ decodeFunctionResult(functionFragment: 'validateTrigger', data: BytesLike): Resu
     
 
     
-    triggers: TypedContractMethod<
-      [arg0: string, ],
-      [[string, string, bigint, bigint, bigint, bigint, bigint, bigint, string, bigint, bigint, string, boolean, bigint] & {eventId: string, region: string, riskScore: bigint, timestamp: bigint, validatedAt: bigint, paidAt: bigint, status: bigint, riskLevel: bigint, triggeredBy: string, totalAmount: bigint, beneficiaryCount: bigint, merkleRoot: string, isGovernanceOverride: boolean, chainId: bigint }],
-      'view'
-    >
-    
-
-    
     unpause: TypedContractMethod<
       [],
       [void],
@@ -1329,11 +1299,6 @@ getFunction(nameOrSignature: 'allocateBudget'): TypedContractMethod<
 getFunction(nameOrSignature: 'budgetRegions'): TypedContractMethod<
       [arg0: BigNumberish, ],
       [string],
-      'view'
-    >;
-getFunction(nameOrSignature: 'budgets'): TypedContractMethod<
-      [arg0: string, ],
-      [[string, bigint, bigint, bigint, boolean] & {region: string, allocatedAmount: bigint, spentAmount: bigint, lastUpdated: bigint, isActive: boolean }],
       'view'
     >;
 getFunction(nameOrSignature: 'cancelTrigger'): TypedContractMethod<
@@ -1501,11 +1466,6 @@ getFunction(nameOrSignature: 'paused'): TypedContractMethod<
       [boolean],
       'view'
     >;
-getFunction(nameOrSignature: 'paymentRecords'): TypedContractMethod<
-      [arg0: BytesLike, ],
-      [[string, bigint, bigint, string, boolean] & {beneficiaryHash: string, amount: bigint, paidAt: bigint, eventId: string, verified: boolean }],
-      'view'
-    >;
 getFunction(nameOrSignature: 'processBatchPayment'): TypedContractMethod<
       [eventId: string, beneficiaryHashes: BytesLike[], amounts: BigNumberish[], merkleProofs: BytesLike[][], phoneHashes: BytesLike[], providers: BigNumberish[], ],
       [void],
@@ -1604,11 +1564,6 @@ getFunction(nameOrSignature: 'triggerPaidCount'): TypedContractMethod<
 getFunction(nameOrSignature: 'triggerSpentAmount'): TypedContractMethod<
       [arg0: string, ],
       [bigint],
-      'view'
-    >;
-getFunction(nameOrSignature: 'triggers'): TypedContractMethod<
-      [arg0: string, ],
-      [[string, string, bigint, bigint, bigint, bigint, bigint, bigint, string, bigint, bigint, string, boolean, bigint] & {eventId: string, region: string, riskScore: bigint, timestamp: bigint, validatedAt: bigint, paidAt: bigint, status: bigint, riskLevel: bigint, triggeredBy: string, totalAmount: bigint, beneficiaryCount: bigint, merkleRoot: string, isGovernanceOverride: boolean, chainId: bigint }],
       'view'
     >;
 getFunction(nameOrSignature: 'unpause'): TypedContractMethod<
