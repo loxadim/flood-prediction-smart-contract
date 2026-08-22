@@ -206,6 +206,9 @@ contract FloodPredictionContract is
     error PaymentRecordMismatch();
     error PaymentAlreadyDispatched();
     error StaleOracleConsensus();
+    /// @notice A8-01 fix: the Mobile Money dispatch ran out of gas rather than failing
+    /// for a business reason. Raised instead of silently emitting MobileMoneyPaymentsFailed.
+    error InsufficientDispatchGas();
 
     // ============================================
     // Initializer
@@ -597,6 +600,24 @@ contract FloodPredictionContract is
         //  check budget is active
         BudgetAllocation storage budget = budgets[trigger.region];
         if (!budget.isActive) revert RegionNotActive();
+
+        // A8-08 fix: consult JokalanteTargeting once per batch, for REGION status only.
+        //
+        // Each beneficiary used to be re-verified against the module's CURRENT Merkle root,
+        // which quietly undid the A20 snapshot guarantee in the availability direction:
+        // publishing a new beneficiary list for a region — a routine act, and one that now
+        // goes through a governance proposal — made every remaining batch of an in-flight
+        // event revert with InvalidMerkleProof. Eligibility does not need that call:
+        // trigger.merkleRoot is frozen at creation and the proof is verified against it
+        // below, so a mid-event rotation cannot change who is payable either way.
+        //
+        // isRegionActive() returns a bool rather than reverting, and covers both the active
+        // flag and the root expiry, so the region gate survives without the coupling.
+        if (jokalanteTargeting != address(0) &&
+            !IJokalanteTargeting(jokalanteTargeting).isRegionActive(trigger.region)) {
+            revert RegionNotActive();
+        }
+
         uint256 totalBatch;
 
         for (uint256 i = 0; i < count; i++) {
@@ -620,14 +641,6 @@ contract FloodPredictionContract is
             bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(beneficiaryHashes[i], amounts[i]))));
             if (!MerkleProof.verify(merkleProofs[i], trigger.merkleRoot, leaf)) {
                 revert InvalidMerkleProof();
-            }
-
-            // H-01 fix: when configured, JokalanteTargeting additionally enforces region active
-            // status and expiry managed by the targeting module.
-            if (jokalanteTargeting != address(0)) {
-                if (!IJokalanteTargeting(jokalanteTargeting).verifyBeneficiary(
-                    trigger.region, beneficiaryHashes[i], amounts[i], merkleProofs[i]
-                )) revert InvalidMerkleProof();
             }
 
             // Record payment on-chain
@@ -717,12 +730,14 @@ contract FloodPredictionContract is
                 fIdx++;
             }
         }
+        uint256 gasBeforeDispatch = gasleft();
         try IMobileMoneyProvider(mobileMoneyProvider).batchInitiatePayments(
             filteredHashes,
             filteredAmounts,
             filteredPhones,
             trigger.region,
-            filteredProviders
+            filteredProviders,
+            eventId
         ) {
             // V-05 fix: mark each dispatched payment so retryMobileMoneyDispatch()
             // cannot re-send a batch that already succeeded.
@@ -731,6 +746,22 @@ contract FloodPredictionContract is
             }
             emit MobileMoneyPaymentsInitiated(eventId, validCount, totalBatch);
         } catch {
+            // A8-01 fix: tell an out-of-gas apart from a business revert before treating
+            // this as a recoverable provider failure.
+            //
+            // EIP-150 forwards only 63/64 of the remaining gas to a call, and a callee that
+            // runs out consumes every unit it was given — so roughly 1/64 comes back. A
+            // business revert (daily limit, unbacked payment, paused provider) returns
+            // almost everything. Without this test the two were indistinguishable: a caller
+            // that sent the bare eth_estimateGas value produced a "failure" that was really
+            // its own gas shortfall, and the swallow left the worst possible state — payment
+            // record finalised, budget debited, and no transfer order in existence. Nothing
+            // watches MobileMoneyPaymentsFailed, so that state was silent as well.
+            //
+            // A threshold on the caller's own remaining gas needs no magic constant and
+            // scales by itself from a single beneficiary to a full batch of 50, where the
+            // dispatch cost spans 0.3M to 8M gas.
+            if (gasleft() < gasBeforeDispatch / 63) revert InsufficientDispatchGas();
             emit MobileMoneyPaymentsFailed(eventId, validCount, totalBatch);
         }
     }
@@ -806,7 +837,8 @@ contract FloodPredictionContract is
             amounts,
             phoneHashes,
             trigger.region,
-            providers
+            providers,
+            eventId
         );
 
         for (uint256 i = 0; i < count; i++) {
@@ -1136,12 +1168,20 @@ contract FloodPredictionContract is
 
     /**
      * @dev Reserved storage gap for future upgrades.
-     * Storage layout: oracleTolerance (1 slot) + __gap (47) = 48 reserved slots total.
-     * Note: committedBudget, triggerSpentAmount, and mobileMoneyDispatched are mappings
-     * and occupy keccak256-based storage slots, not numbered slots in the gap calculation.
-     * V-05 fix: mobileMoneyDispatched mapping added, __gap reduced from 48 to 47 to
-     * preserve the total reserved slot count.
-     * When adding new state variables, reduce __gap size accordingly.
+     *
+     * RULE: EVERY state variable added to this contract consumes exactly one sequential
+     * storage slot and MUST be paired with a matching reduction of __gap.
+     *
+     * A57 fix — this note previously claimed that mappings "occupy keccak256-based storage
+     * slots, not numbered slots in the gap calculation". That is wrong, and it contradicted
+     * what the code actually does. A mapping DECLARATION reserves a sequential slot `p` like
+     * any other variable; only its VALUES live at keccak256(key . p). A maintainer following
+     * the old note would add a mapping without shrinking __gap and shift every variable
+     * after it on the next upgrade. The OZ Upgrades plugin would catch the collision at
+     * upgrade time, but only after the mistake was written.
+     *
+     * The layout itself has always been correct: __gap was properly reduced from 48 to 47
+     * when the mobileMoneyDispatched mapping was added (V-05 fix).
      */
     uint256[47] private __gap;
 }

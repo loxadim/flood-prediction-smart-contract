@@ -174,6 +174,9 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
     /// @notice Thrown when the oracle is already active (cannot reactivate).
     error OracleAlreadyActive();
 
+    /// @notice A52 fix: thrown when deregistering an oracle that is still active.
+    error OracleStillActive();
+
     /// @notice Thrown when the oracle address is already registered.
     error OracleAlreadyRegistered();
 
@@ -206,6 +209,9 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
     error AlreadyCommittedInRound();
     error NoCommitmentFound();
 
+    /// @notice A61 fix: raised when committing after the commit phase has closed.
+    error CommitPhaseOver();
+
     // =========================================================================
     //                         CONFIG CHANGE EVENTS
     // =========================================================================
@@ -224,6 +230,9 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
 
     /// @notice H5-MO fix: Emitted when active oracle count drops below the minimum required for reliable consensus.
     event InsufficientOracleCountWarning(uint256 activeCount, uint256 minRequired);
+
+    /// @notice A52 fix: Emitted when an oracle is permanently removed and its MAX_ORACLES slot reclaimed.
+    event OracleDeregistered(address indexed oracle);
 
     // =========================================================================
     //                             MODIFIERS
@@ -361,13 +370,60 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
         emit OracleReactivated(oracle);
     }
 
+    /**
+     * @notice Permanently removes a deactivated oracle and frees its `MAX_ORACLES` slot.
+     * @dev A52 fix. `registerOracle` caps on `oracleList.length`, and `oracleList` used to
+     *      grow monotonically — `deactivateOracle` only flips `isActive`. After ten
+     *      cumulative registrations over the contract's lifetime (compromised keys,
+     *      replaced providers, oracles auto-disabled after consecutive outliers) NO new
+     *      oracle could ever be onboarded. If active oracles then fell below
+     *      `MIN_ORACLE_COUNT`, consensus stopped being computed, the last consensus went
+     *      stale, and FloodPredictionContract.createFloodTrigger() rejected every trigger
+     *      with `StaleOracleConsensus` — leaving only the governance-override path that
+     *      bypasses oracle validation altogether.
+     *
+     *      The oracle must be deactivated first, so freeing a slot is always a deliberate
+     *      two-step action. `_oracles[oracle]` is cleared, meaning a re-registered address
+     *      restarts from `INITIAL_REPUTATION` with no history — and, because
+     *      re-registration goes through `registerOracle`, it is pushed back onto
+     *      `oracleList` (the failure mode that produced the governance A49 bug).
+     *
+     * Requirements:
+     * - `oracle` must be registered.
+     * - `oracle` must currently be inactive.
+     *
+     * Emits an {OracleDeregistered} event.
+     *
+     * @param oracle The address of the oracle to deregister.
+     */
+    function deregisterOracle(address oracle) external onlyOwner {
+        if (_oracles[oracle].registeredAt == 0) revert NotRegisteredOracle();
+        if (_oracles[oracle].isActive) revert OracleStillActive();
+
+        uint256 len = oracleList.length;
+        for (uint256 i = 0; i < len; i++) {
+            if (oracleList[i] == oracle) {
+                oracleList[i] = oracleList[len - 1];
+                oracleList.pop();
+                break;
+            }
+        }
+
+        delete _oracles[oracle];
+
+        emit OracleDeregistered(oracle);
+    }
+
     // =========================================================================
     //                          DATA SUBMISSION
     // =========================================================================
 
     /**
      * @notice Phase 1 of commit-reveal: oracle commits a hash of its data.
-     * @dev The commit hash is `keccak256(abi.encodePacked(region, riskScore, dataSource, salt))`.
+     * @dev A51 fix: the commit hash is
+     *      `keccak256(abi.encode(msg.sender, region, riskScore, dataSource, salt))` —
+     *      it MUST include the committing oracle's own address, otherwise the hash can
+     *      be copied from another oracle and replayed at reveal time.
      *      Each oracle can commit only once per round per region.
      *
      * @param region     The geographic region identifier.
@@ -384,6 +440,21 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
 
         if (_hasCommittedInRound[region][round][msg.sender]) {
             revert AlreadyCommittedInRound();
+        }
+
+        // A61 fix: the commit phase MUST close before the first reveal can happen,
+        // otherwise commit-reveal provides no secrecy at all. revealData() gates on
+        // `roundCommitStart + COMMIT_PHASE_DURATION`, so once that instant passes any
+        // oracle may reveal — and without this bound a late oracle could simply wait
+        // for a peer to publish (riskScore, dataSource, salt) in the clear, compute a
+        // perfectly valid hash FOR ITSELF from those public values, commit it, and
+        // reveal in the next block. It would mirror the peer's score with no
+        // independent data while still counting toward quorum and earning reputation.
+        // The A51 msg.sender binding closes hash-copying; only this bound closes
+        // late-commit mirroring. The two are needed together.
+        uint256 start = roundCommitStart[region][round];
+        if (start != 0 && block.timestamp >= start + COMMIT_PHASE_DURATION) {
+            revert CommitPhaseOver();
         }
 
         _commitments[region][round][msg.sender] = Commitment({
@@ -443,8 +514,19 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
         if (block.timestamp < commitStart + COMMIT_PHASE_DURATION) revert CommitPhaseNotOver();
         if (block.timestamp > commitStart + COMMIT_PHASE_DURATION + REVEAL_WINDOW) revert RevealWindowExpired();
 
-        // Verify hash matches
-        bytes32 expectedHash = keccak256(abi.encodePacked(region, riskScore, dataSource, salt));
+        // Verify hash matches.
+        // A51 fix: the commitment is bound to msg.sender. Without it the hash was
+        // copyable — an oracle could mirror another's commitment, wait for that oracle
+        // to publish (riskScore, dataSource, salt) at reveal time, and replay the very
+        // same values against its own copy. That defeats the whole point of
+        // commit-reveal: a passive oracle could shadow a peer's score without producing
+        // independent data, while still counting toward quorum and earning reputation.
+        // abi.encode also replaces abi.encodePacked, removing the ambiguity of
+        // concatenating two dynamic strings (region, dataSource).
+        // The round is deliberately NOT part of the hash: commitments are already keyed
+        // by round in _commitments, and binding it would break any commit whose round
+        // advanced between the oracle computing the hash and the tx being mined.
+        bytes32 expectedHash = keccak256(abi.encode(msg.sender, region, riskScore, dataSource, salt));
         if (expectedHash != commitment.commitHash) revert InvalidReveal();
 
         // Prevent double submission
@@ -816,22 +898,38 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
     function _maybeAdvanceRound(string memory region) internal {
         uint256 round = currentRound[region];
 
-        // If the latest consensus exists and was produced in this round,
-        // advance the round so new submissions go into a fresh cycle.
-        if (_latestConsensus[region].reached && _latestConsensus[region].timestamp > 0) {
-            OracleData[] storage subs = _regionSubmissions[region][round];
-            if (subs.length > 0) {
-                // Check if consensus was already computed for this round by
-                // seeing if there is at least one submission that has the
-                // outlier flag potentially set (consensus was run).
-                // A simpler heuristic: if consensus timestamp >= earliest
-                // submission timestamp of this round, advance.
-                bool consensusFromThisRound = _latestConsensus[region].timestamp >= subs[0].timestamp;
-                if (consensusFromThisRound) {
-                    currentRound[region] = round + 1;
-                    return;
-                }
-            }
+        // A53 fix: the authoritative "this round is finished" signal is the A23 flag set
+        // by _calculateConsensus — not a timestamp comparison.
+        //
+        // The previous heuristic advanced when `consensus.timestamp >= subs[0].timestamp`.
+        // That equality also holds when a NEW round's first submission shares the block of
+        // the consensus, which is exactly what happens when a relayer flushes several
+        // queued submissions into one block: every submission then opened its own round,
+        // scattering valid data across single-entry rounds where it no longer counted
+        // toward quorum.
+        if (consensusComputedForRound[region][round]) {
+            currentRound[region] = round + 1;
+            return;
+        }
+
+        // A61 fix (liveness): a round whose commit-reveal cycle has fully lapsed must be
+        // able to advance. Closing the commit phase would otherwise strand a region for
+        // good: once roundCommitStart is set, no further commit is accepted for that
+        // round, _hasCommittedInRound blocks re-committing, and the staleness check below
+        // never fires because a commit that was never revealed leaves
+        // _regionSubmissions empty. Oracles that all missed the reveal window would have
+        // no way back.
+        //
+        // This does not reopen the mirroring attack: between commitStart + COMMIT_PHASE
+        // and the end of the reveal window — the interval where revealed values are
+        // public and the round is still live — commitData() stays closed. Only after the
+        // whole cycle expires does a commit open a *new* round, where a stale score from
+        // the previous round carries no more weight than any other submission.
+        uint256 commitStart = roundCommitStart[region][round];
+        if (commitStart != 0 &&
+            block.timestamp > commitStart + COMMIT_PHASE_DURATION + REVEAL_WINDOW) {
+            currentRound[region] = round + 1;
+            return;
         }
 
         // Also advance if all submissions in the current round are stale.
@@ -878,7 +976,16 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
     ) internal view returns (uint256 count) {
         OracleData[] storage subs = _regionSubmissions[region][round];
         for (uint256 i = 0; i < subs.length; i++) {
-            if (block.timestamp - subs[i].timestamp < dataFreshnessThreshold) {
+            // A62 fix: a submission only counts while its author is still an active
+            // oracle. Deactivating/deregistering an oracle never touched
+            // _regionSubmissions, so a value submitted with a key later found to be
+            // compromised kept feeding consensus with no way to revoke it.
+            if (!_oracles[subs[i].oracle].isActive) continue;
+            // A8-12 fix: `<=`, matching isConsensusReached() and getConsensusRiskScore().
+            // The quorum test used a strict `<` while the public views used `<=`, so a
+            // submission exactly on the freshness boundary counted for one and not the
+            // other — one block of disagreement about whether consensus can be computed.
+            if (block.timestamp - subs[i].timestamp <= dataFreshnessThreshold) {
                 count++;
             }
         }
@@ -913,7 +1020,12 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
         uint256 freshCount = 0;
 
         for (uint256 i = 0; i < len; i++) {
-            if (block.timestamp - submissions[i].timestamp < dataFreshnessThreshold) {
+            // A62 fix: skip submissions whose author is no longer active — kept in
+            // lockstep with _countFreshSubmissions so the quorum test and the actual
+            // participant set never disagree.
+            if (!_oracles[submissions[i].oracle].isActive) continue;
+            // A8-12 fix: `<=`, kept in lockstep with _countFreshSubmissions above.
+            if (block.timestamp - submissions[i].timestamp <= dataFreshnessThreshold) {
                 scores[freshCount] = submissions[i].riskScore;
                 submitters[freshCount] = submissions[i].oracle;
                 freshCount++;
@@ -1109,6 +1221,11 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
      */
     function _rewardOracle(address oracle) internal {
         OracleInfo storage info = _oracles[oracle];
+        // A62 fix: never write onto a deleted record. deregisterOracle() clears the
+        // struct, and writing reputation back would resurrect a phantom entry with
+        // registeredAt == 0 — harmless for access control, but it corrupts
+        // getOracleInfo() for anyone reading oracle history.
+        if (info.registeredAt == 0) return;
 
         // Reset consecutive outlier streak
         info.consecutiveOutliers = 0;
@@ -1137,6 +1254,8 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
      */
     function _penalizeOracle(address oracle) internal {
         OracleInfo storage info = _oracles[oracle];
+        // A62 fix: see _rewardOracle — do not write onto a deregistered record.
+        if (info.registeredAt == 0) return;
 
         // Decrease reputation (floor at 0)
         if (info.reputation >= REPUTATION_PENALTY) {

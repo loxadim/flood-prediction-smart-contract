@@ -287,7 +287,8 @@ describe("H8-MMP: Batch Duplicate Detection", function () {
                 [5000, 5000],
                 [VALID_PHONE_HASH, PHONE_HASH_2],
                 REGION,
-                [0, 0]
+                [0, 0],
+                ""
             )
         ).to.be.revertedWithCustomError(mobileMoney, "InvalidBeneficiaryHash");
     });
@@ -303,7 +304,8 @@ describe("H8-MMP: Batch Duplicate Detection", function () {
             [5000, 5000],
             [VALID_PHONE_HASH, PHONE_HASH_2],
             REGION,
-            [0, 0]
+            [0, 0],
+            ""
         );
         // If it doesn't revert with InvalidBeneficiaryHash, the duplicate check passed
         // It may still revert for other reasons (phone validation, daily limits, etc.)
@@ -328,7 +330,8 @@ describe("H8-MMP: Batch Duplicate Detection", function () {
                 [5000, 5000, 5000],
                 [VALID_PHONE_HASH, PHONE_HASH_2, phoneHash3],
                 REGION,
-                [0, 0, 0]
+                [0, 0, 0],
+                ""
             )
         ).to.be.revertedWithCustomError(mobileMoney, "InvalidBeneficiaryHash");
     });

@@ -4,7 +4,21 @@
  */
 import hre from "hardhat";
 
-const { ethers } = await hre.network.connect();
+const connection = await hre.network.connect();
+const { ethers } = connection;
+
+// A64 fix: this script deploys MockWASDIOracle, whose simulate* functions let an
+// authorized submitter set any region's risk score outright. Its header said "for
+// testing" but nothing stopped it running against Amoy or mainnet. Local chain IDs
+// only: 1337 (hardhat EDR) and 31337 (hardhat node).
+const LOCAL_CHAIN_IDS = [1337n, 31337n];
+const { chainId } = await ethers.provider.getNetwork();
+if (!LOCAL_CHAIN_IDS.includes(chainId)) {
+    console.error(`❌ Refusing to run: chainId ${chainId} is not a local network.`);
+    console.error("   deploy-v3.js deploys MockWASDIOracle and is for local testing only.");
+    console.error("   Use scripts/deploy-upgradeable.js or scripts/deploy-amoy.js instead.");
+    process.exit(1);
+}
 
 const [deployer] = await ethers.getSigners();
 console.log("=== OPAL V3 Direct Deploy (Testing) ===");

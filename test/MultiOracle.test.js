@@ -672,16 +672,21 @@ describe("MultiOracle", function () {
             await multiOracle.registerOracle(oracle4.address, "Oracle-4");
         });
 
-        function computeCommitHash(region, riskScore, dataSource, salt) {
-            return ethers.solidityPackedKeccak256(
-                ["string", "uint256", "string", "bytes32"],
-                [region, riskScore, dataSource, salt]
+        // A51 fix: the commit hash is bound to the committing oracle's address and uses
+        // abi.encode, so an oracle can no longer copy a peer's commitment and replay the
+        // values that peer publishes at reveal time.
+        function computeCommitHash(oracle, region, riskScore, dataSource, salt) {
+            return ethers.keccak256(
+                ethers.AbiCoder.defaultAbiCoder().encode(
+                    ["address", "string", "uint256", "string", "bytes32"],
+                    [oracle, region, riskScore, dataSource, salt]
+                )
             );
         }
 
         it("should allow oracle to commit data", async function () {
             const salt = ethers.randomBytes(32);
-            const hash = computeCommitHash("dakar", 60, "WASDI", salt);
+            const hash = computeCommitHash(oracle1.address, "dakar", 60, "WASDI", salt);
 
             await expect(
                 multiOracle.connect(oracle1).commitData("dakar", hash)
@@ -690,7 +695,7 @@ describe("MultiOracle", function () {
 
         it("should revert double commit in same round", async function () {
             const salt = ethers.randomBytes(32);
-            const hash = computeCommitHash("dakar", 60, "WASDI", salt);
+            const hash = computeCommitHash(oracle1.address, "dakar", 60, "WASDI", salt);
 
             await multiOracle.connect(oracle1).commitData("dakar", hash);
             await expect(
@@ -700,7 +705,7 @@ describe("MultiOracle", function () {
 
         it("should revert reveal before commit phase ends", async function () {
             const salt = ethers.id("salt1");
-            const hash = computeCommitHash("dakar", 60, "WASDI", salt);
+            const hash = computeCommitHash(oracle1.address, "dakar", 60, "WASDI", salt);
 
             await multiOracle.connect(oracle1).commitData("dakar", hash);
 
@@ -712,7 +717,7 @@ describe("MultiOracle", function () {
 
         it("should allow reveal after commit phase and verify hash", async function () {
             const salt = ethers.id("salt1");
-            const hash = computeCommitHash("dakar", 60, "WASDI", salt);
+            const hash = computeCommitHash(oracle1.address, "dakar", 60, "WASDI", salt);
 
             await multiOracle.connect(oracle1).commitData("dakar", hash);
 
@@ -728,7 +733,7 @@ describe("MultiOracle", function () {
 
         it("should revert reveal with wrong data (invalid hash)", async function () {
             const salt = ethers.id("salt1");
-            const hash = computeCommitHash("dakar", 60, "WASDI", salt);
+            const hash = computeCommitHash(oracle1.address, "dakar", 60, "WASDI", salt);
 
             await multiOracle.connect(oracle1).commitData("dakar", hash);
 
@@ -743,7 +748,7 @@ describe("MultiOracle", function () {
 
         it("should revert reveal after window expires", async function () {
             const salt = ethers.id("salt1");
-            const hash = computeCommitHash("dakar", 60, "WASDI", salt);
+            const hash = computeCommitHash(oracle1.address, "dakar", 60, "WASDI", salt);
 
             await multiOracle.connect(oracle1).commitData("dakar", hash);
 
@@ -772,7 +777,7 @@ describe("MultiOracle", function () {
 
             // All oracles commit
             for (let i = 0; i < 3; i++) {
-                const hash = computeCommitHash("dakar", scores[i], "WASDI", salts[i]);
+                const hash = computeCommitHash(oracles[i].address, "dakar", scores[i], "WASDI", salts[i]);
                 await multiOracle.connect(oracles[i]).commitData("dakar", hash);
             }
 

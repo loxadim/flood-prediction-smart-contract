@@ -90,6 +90,12 @@ contract MockWASDIOracle is IWASDIOracle, Ownable2Step {
      * @param region Target region
      */
     function simulateHighRisk(string calldata region) external override {
+        // A64 fix: the simulate* functions had NO access control, so any address could
+        // set a region's risk score — while submitSatelliteData() right above enforces
+        // authorizedSubmitters. The real WASDIOracleConnector gates its simulation
+        // functions behind onlyRelayer plus the irreversible lockProductionMode(); this
+        // mock now at least matches its own submission path.
+        if (!authorizedSubmitters[msg.sender]) revert NotAuthorized();
         latestDataMap[region] = SatelliteData({
             region: region,
             riskScore: 85,
@@ -110,6 +116,8 @@ contract MockWASDIOracle is IWASDIOracle, Ownable2Step {
      * @param region Target region
      */
     function simulateLowRisk(string calldata region) external override {
+        // A64 fix: see simulateHighRisk — authorization was missing entirely.
+        if (!authorizedSubmitters[msg.sender]) revert NotAuthorized();
         latestDataMap[region] = SatelliteData({
             region: region,
             riskScore: 15,
@@ -134,7 +142,10 @@ contract MockWASDIOracle is IWASDIOracle, Ownable2Step {
         uint256 soilMoisture,
         uint256 waterLevel
     ) external {
-        require(riskScore <= 100 && soilMoisture <= 100, "Invalid values");
+        // A64 fix: see simulateHighRisk — authorization was missing entirely.
+        if (!authorizedSubmitters[msg.sender]) revert NotAuthorized();
+        if (riskScore > 100) revert InvalidRiskScore();
+        if (soilMoisture > 100) revert InvalidSoilMoisture();
 
         latestDataMap[region] = SatelliteData({
             region: region,

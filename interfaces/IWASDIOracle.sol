@@ -45,5 +45,7 @@ interface IWASDIOracle {
     // `region` is non-indexed so off-chain consumers (e.g. the relayer) can
     // decode it directly as a string instead of an indexed-topic hash.
     event HighRiskDetected(string region, uint256 riskScore, uint256 timestamp);
-    event DataExpired(string indexed region, uint256 lastUpdate);
+    // A63 fix: DataExpired removed — staleness is evaluated lazily on read
+    // (getRiskScore() returns 0, isDataFresh() returns false), never as a state
+    // transition, so it could not be emitted. Use isDataFresh() to detect staleness.
 }

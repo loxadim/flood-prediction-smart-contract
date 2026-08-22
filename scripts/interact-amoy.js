@@ -178,13 +178,32 @@ try {
         // FloodPrediction.processBatchPayment calls JokalanteTargeting.verifyBeneficiary, which
         // reverts RegionNotActive until the region is activated via updateMerkleRoot. The deploy
         // scripts do not seed regions (no beneficiary set exists at deploy time), so the operator
-        // seeds JT per flood event here. Owner-only call — the deployer owns JokalanteTargeting.
-        try {
-            const seedTx = await jokalante.updateMerkleRoot(targetRegion, merkleRoot, 2);
-            await seedTx.wait();
-            console.log(`  ✅ JokalanteTargeting seeded for ${targetRegion} (region active, matching root)`);
-        } catch (e) {
-            console.log(`  ⚠️  Could not seed JokalanteTargeting (need JT owner signer): ${e.message}`);
+        // seeds JT per flood event here.
+        //
+        // R7-03 fix: this used to assert "the deployer owns JokalanteTargeting". That stopped
+        // being true once ARCH-02 handed the five non-upgradeable contracts to governance.
+        // updateMerkleRoot is onlyOwner, so on a governance-owned deployment this call reverts
+        // and the whole interaction below fails later with RegionNotActive — a confusing
+        // second-order failure. Detect the owner first and say exactly what to do instead.
+        const jtOwner = await jokalante.owner();
+        const signerAddr = await (await ethers.provider.getSigner(0)).getAddress();
+        if (jtOwner.toLowerCase() !== signerAddr.toLowerCase()) {
+            console.log(`  ⚠️  JokalanteTargeting appartient à ${jtOwner}, pas au signataire courant.`);
+            if (addrs.OpalGovernanceProxy && jtOwner.toLowerCase() === addrs.OpalGovernanceProxy.toLowerCase()) {
+                console.log("     La racine doit être publiée par proposition de gouvernance :");
+                console.log(`     data = jokalante.interface.encodeFunctionData("updateMerkleRoot", ["${targetRegion}", "${merkleRoot}", 2])`);
+                console.log(`     puis createProposal(PARAMETER_CHANGE, ..., data, "${targetRegion}", ${addrs.JokalanteTargeting})`);
+                console.log("     Prévoir le délai d'exécution — publier les listes en amont de la saison.");
+            }
+            console.log("     Étape de seeding ignorée — les paiements échoueront en RegionNotActive.");
+        } else {
+            try {
+                const seedTx = await jokalante.updateMerkleRoot(targetRegion, merkleRoot, 2);
+                await seedTx.wait();
+                console.log(`  ✅ JokalanteTargeting seeded for ${targetRegion} (region active, matching root)`);
+            } catch (e) {
+                console.log(`  ⚠️  Could not seed JokalanteTargeting: ${e.shortMessage ?? e.message}`);
+            }
         }
 
         // Create flood trigger

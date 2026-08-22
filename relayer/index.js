@@ -9,7 +9,7 @@ async function printUsage() {
   console.log('Commands:');
   console.log('  start                              Start event listener');
   console.log('  submit-satellite <file>            Submit satellite data JSON array to WASDI connector');
-  console.log('  submit-batch <file>                Submit batch payment request JSON array to MobileMoneyProvider');
+  console.log('  submit-batch <file> [eventId]      Submit batch payment request JSON array to MobileMoneyProvider');
   console.log('  confirm-batch <file>               Confirm batch payments from JSON array');
 }
 
@@ -38,7 +38,8 @@ async function run() {
       break;
     case 'submit-batch':
       await service._connect();
-      await service.submitBatchPayments(payload);
+      // ARCH-01: optional eventId — required on a ledger-bound MobileMoneyProvider.
+      await service.submitBatchPayments(payload, process.argv[4] ?? '');
       break;
     case 'confirm-batch':
       await service._connect();

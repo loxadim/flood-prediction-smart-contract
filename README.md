@@ -105,7 +105,10 @@ npx hardhat build
 ### Test
 
 ```bash
-# Full test suite (512 tests)
+# Démonstration bout en bout (inondation à Thiès, réseau local)
+npm run demo
+
+# Full test suite (577 tests)
 npx hardhat test
 
 # With gas report

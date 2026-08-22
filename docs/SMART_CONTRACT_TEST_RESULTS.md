@@ -4,7 +4,7 @@
 **Version**: 1.0.0  
 **Framework**: Hardhat 3.x / Mocha / Chai / Ethers.js 6.x  
 **Solidity**: ^0.8.22 (compiled 0.8.28)  
-**Result**: **512 / 512 tests passing (~2m)**
+**Result**: **577 / 577 tests passing (~2m)**
 
 ---
 
@@ -25,16 +25,16 @@
 
 ## 1. Executive Summary
 
-The OPAL Platform smart contract suite achieves **100% test pass rate** across **512 test cases** spread over **18 test files**. Tests cover all 7 production contracts, 1 library, 3 mock contracts, and the off-chain Mobile Money relayer service, validating functional correctness, security properties, access control, edge cases, and batch scalability up to 10,000 beneficiaries.
+The OPAL Platform smart contract suite achieves **100% test pass rate** across **577 test cases** spread over **21 test files**. Tests cover all 7 production contracts, 1 library, 3 mock contracts, and the off-chain Mobile Money relayer service, validating functional correctness, security properties, access control, edge cases, and batch scalability up to 10,000 beneficiaries.
 
 | Metric | Value |
 |--------|-------|
-| Total Tests | 512 |
-| Passing | 512 |
+| Total Tests | 577 |
+| Passing | 577 |
 | Failing | 0 |
 | Pending | 0 |
 | Execution Time | ~2m |
-| Test Files | 18 |
+| Test Files | 21 |
 | Contracts Tested | 7 + 1 library + relayer service |
 | CI/CD | GitHub Actions (build, test, lint, size-check) |
 
@@ -62,7 +62,7 @@ The OPAL Platform smart contract suite achieves **100% test pass rate** across *
 Solidity Compiler: 0.8.28
 Optimizer: enabled (200 runs, viaIR)
 Chain: Hardhat EDR (chainId 1337)
-Block Gas Limit: 60,000,000
+Block Gas Limit: 30,000,000  (aligné sur Polygon PoS — correctif ARCH-04)
 Hardfork: cancun
 Mocha Timeout: 120,000 ms
 ```
@@ -87,12 +87,15 @@ Mocha Timeout: 120,000 ms
 | 10 | AuditFixValidation.test.js | FloodPredictionContract | 17 | Audit Round 2 regression tests |
 | 11 | AuditV3Fixes.test.js | Multiple | 14 | Audit Round 3 regression tests (full-project audit) |
 | 12 | AuditV4Fixes.test.js | Multiple + Relayer | 11 | Audit Round 4 regression tests (full-project audit) |
-| 13 | Relayer.test.js | Relayer Service (off-chain) | 9 | Security, rate limiting, anomaly detection, audit logging |
-| 14 | BatchBeneficiaries1000.test.js | FloodPredictionContract | 7 | 1,000 beneficiary scale |
-| 15 | BatchBeneficiaries2000.test.js | FloodPredictionContract | 8 | 2,000 beneficiary scale + gas |
-| 16 | BatchBeneficiaries3000.test.js | FloodPredictionContract | 8 | 3,000 beneficiary scale + gas |
-| 17 | BatchBeneficiaries5000.test.js | FloodPredictionContract | 9 | 5,000 beneficiary scale + gas |
-| 18 | BatchBeneficiaries10000.test.js | FloodPredictionContract | 9 | 10,000 beneficiary scale + gas |
+| 13 | AuditV5Fixes.test.js | Multiple + Relayer | 23 | Audit Round 5 regression tests (full-project audit) |
+| 14 | AuditV6Fixes.test.js | Multiple + Relayer | 32 | Audit Round 6 regression tests (full-project audit) |
+| 15 | Relayer.test.js | Relayer Service (off-chain) | 9 | Security, rate limiting, anomaly detection, audit logging |
+| 16 | BatchBeneficiaries1000.test.js | FloodPredictionContract | 7 | 1,000 beneficiary scale |
+| 17 | BatchBeneficiaries2000.test.js | FloodPredictionContract | 8 | 2,000 beneficiary scale + gas |
+| 18 | BatchBeneficiaries3000.test.js | FloodPredictionContract | 8 | 3,000 beneficiary scale + gas |
+| 19 | BatchBeneficiaries5000.test.js | FloodPredictionContract | 9 | 5,000 beneficiary scale + gas |
+| 20 | BatchBeneficiaries10000.test.js | FloodPredictionContract | 9 | 10,000 beneficiary scale + gas |
+| 21 | ArchFixes.test.js | Multiple | 10 | Architecture review regression (ARCH-01/02) |
 
 ### 3.2 Test Categories
 
@@ -106,12 +109,12 @@ pie title Test Distribution by Category
     "Targeting" : 36
     "KYC/AML Compliance" : 84
     "Security" : 17
-    "Audit Regression" : 64
+    "Audit Regression" : 129
     "Relayer Service" : 9
     "Scale Testing" : 41
 ```
 
-> Audit Regression = AuditV2Fixes (22) + AuditFixValidation (17) + AuditV3Fixes (14) + AuditV4Fixes (11).
+> Audit Regression = AuditV2Fixes (22) + AuditFixValidation (17) + AuditV3Fixes (14) + AuditV4Fixes (11) + AuditV5Fixes (23) + AuditV6Fixes (32) + ArchFixes (10).
 
 ---
 
@@ -550,6 +553,122 @@ Second audit complet du projet (7 contrats, relayer off-chain, scripts, configur
 | A38 | Info | Mode mixte commit-reveal / soumission directe (MultiOracle) : commit orphelin possible si le round avance | Limitation documentée — standardiser un seul mode par déploiement | (doc) |
 | A39 | Info | `phoneHash` non lié à la feuille Merkle (destination contrôlée par l'OPERATOR) | Hypothèse de confiance documentée (le relayer résout le MSISDN via son propre registre) | (doc) |
 
+### 8.6 Audit Round 5 — Audit global du projet (Août 2026)
+
+Troisième audit complet du projet (7 contrats, relayer off-chain, scripts, documentation), conduit
+entièrement en local sur le commit `0aa109c`. 12 findings corrigés, avec tests de régression dans
+`AuditV5Fixes.test.js` (23 tests). **6 findings sur 12 ont été reproduits par PoC exécutés on-chain
+avant correction**, et les mêmes PoC rejoués après correction échouent — l'exploit ne passe plus.
+
+> Numérotation A49–A60 (référencée dans les commentaires du code).
+
+| Finding | Sévérité | Description | Correction | Tests |
+|---------|----------|-------------|------------|-------|
+| A49 | **High** | La branche de réintégration d'`addGovernanceActor` ne repoussait pas l'acteur dans `actorList` alors que `removeGovernanceActor` l'en retire (swap-and-pop L-06). Le recomptage A25 d'`executeProposal` itère `actorList` → signature ignorée. Après 2 rotations de clés, `actorList.length < quorum` : **plus aucune proposition exécutable**, y compris la voie d'upgrade UUPS | `actorList.push(actor)` dans la branche de réintégration | AuditV5Fixes.test.js |
+| A51 | Medium | Le hash commit-reveal (`abi.encodePacked(region, riskScore, dataSource, salt)`) n'était lié ni à `msg.sender` : un oracle pouvait recopier l'engagement d'un pair puis rejouer les valeurs révélées, mirrorant son score sans donnée indépendante tout en comptant au quorum | `abi.encode(msg.sender, region, riskScore, dataSource, salt)` — lève aussi l'ambiguïté de concaténation de deux chaînes dynamiques | AuditV5Fixes.test.js |
+| A52 | Medium | `oracleList` ne décroissait jamais et `registerOracle` plafonne dessus : après 10 enregistrements cumulés, aucun nouvel oracle possible. Sous `MIN_ORACLE_COUNT`, le consensus s'arrête et `createFloodTrigger` rejette en boucle (`StaleOracleConsensus`) | `deregisterOracle()` (owner, oracle préalablement désactivé) : swap-and-pop + `delete _oracles[]` | AuditV5Fixes.test.js |
+| A54 | Medium | `submitAttestation` acceptait un `identityHash` nul, que `approveAttestation`/`rejectAttestation` utilisent comme test d'existence → attestation bloquée à vie en PENDING (ni approuvable, ni rejetable, ni resoumissible), bénéficiaire écarté de tous les lots | Rejet `InvalidIdentityHash` à la soumission | AuditV5Fixes.test.js |
+| A55 | Medium | Un paiement `EXPIRED` n'avait aucun retour vers PENDING (`retryPayment` n'acceptait que FAILED). Le budget étant déjà débité et `mobileMoneyDispatched` à `true` côté FPC, le bénéficiaire était compté comme payé sans jamais recevoir l'argent | `retryPayment` accepte `EXPIRED` comme `FAILED` (comptabilité symétrique : les deux états ont déjà remboursé l'allocation journalière) | AuditV5Fixes.test.js |
+| A53 | Low | `_maybeAdvanceRound` avançait le round sur `consensus.timestamp >= subs[0].timestamp` — vrai aussi quand plusieurs soumissions partagent le bloc du consensus, dispersant les données en rounds à une seule entrée | Utilisation du drapeau A23 `consensusComputedForRound` | AuditV5Fixes.test.js |
+| A56 | Low | `verifyBeneficiary` revert (`MerkleRootExpired`) au lieu de renvoyer `false`, et FPC l'appelle sans try/catch : l'expiration d'une région (90 j) bloquait les lots restants d'un trigger en cours | `extendRegionExpiry()` — prolonge sans rotation de racine (l'éligibilité reste figée par le snapshot A20) | AuditV5Fixes.test.js |
+| A50 | Low | `rejectProposal` comparait au `quorum` courant alors qu'`executeProposal` utilise `proposal.requiredSignatures` figé à la création → seuils divergents après `updateQuorum` | Comparaison sur `proposal.requiredSignatures` des deux côtés | AuditV5Fixes.test.js |
+| A57 | Low | Commentaire `__gap` faux : « les mappings occupent des slots keccak256, pas des slots numérotés ». Un mainteneur suivant cette règle décale tout le layout au prochain ajout de mapping | Règle réécrite : toute variable d'état, mappings compris, consomme un slot | (doc) |
+| A58 | Low | `sanitizeForLogging` importé dans `providers.js` sans jamais être appelé, et non récursif (une PII imbriquée traversait le filtre) | Fonction rendue récursive (objets, tableaux, cycles, clés insensibles à la casse) + branchée dans `service.js` ; import mort retiré | AuditV5Fixes.test.js |
+| A59 | Low | Sous 4 oracles actifs, `createFloodTrigger` reste sur le chemin cold-start : l'opérateur peut déclarer n'importe quel `riskScore` sans contrepartie oracle. Le script se contentait d'avertir | `verify-deployment.js` : condition **bloquante** (`fail`) et non plus avertissement | (scripts) |
+| A60 | Low | `FloodPredictionContract` à 92 % de la limite EIP-170 (~2 KB de marge) sans garde-fou : un dépassement ne se révélerait qu'au déploiement | `npm run size` — échec de build au-delà de 95,7 % de la limite | (scripts) |
+
+### 8.7 Audit Round 6 — Audit global du projet (Août 2026)
+
+Quatrième audit complet, ciblant délibérément les surfaces que les rounds 1 à 5 n'avaient pas
+ouvertes — scripts de déploiement, relayer off-chain, CI, mocks — et relisant de façon critique les
+correctifs du round 5. 13 findings corrigés, avec tests de régression dans `AuditV6Fixes.test.js`
+(32 tests). **7 findings sur 13 reproduits par PoC exécutés on-chain avant correction.**
+
+> Numérotation A61–A73. Un fil conducteur relie R6-01, R6-03 et R6-05 : des mécanismes de sécurité
+> soigneusement construits mais **jamais joignables en production**, chacun situé à la couture entre
+> les contrats et ce qui les déploie ou les pilote — la zone que les tests unitaires ne traversent pas.
+
+| Finding | Sévérité | Description | Correction | Tests |
+|---------|----------|-------------|------------|-------|
+| A65 | **High** | Les scripts whitelistent 6 sélecteurs d'urgence + `updateRiskThreshold` sur la gouvernance et déclarent FPC comme cible autorisée, mais `grantRole` n'existait nulle part : toute proposition vers FPC revert en `AccessControlUnauthorizedAccount`. Le chemin de réponse d'urgence était mort-né, et `verify-deployment.js` ne testait `hasRole` que pour le déployeur | `grantRole(ADMIN_ROLE / PAUSER_ROLE, governanceProxy)` dans les deux scripts + contrôle **bloquant** dans `verify-deployment.js` | AuditV6Fixes.test.js |
+| A61 | **High** | `commitData()` n'avait pas de borne haute : un oracle pouvait attendre qu'un pair révèle ses valeurs en clair, calculer un hash valide **pour lui-même** depuis ces valeurs publiques, le commiter et le révéler au bloc suivant. Le correctif A51 (liaison `msg.sender`) fermait la recopie de hash, pas ce vecteur | Fermeture de la phase de commit (`CommitPhaseOver`) + avance de round quand le cycle commit-reveal a entièrement expiré, pour ne pas figer la région | AuditV6Fixes.test.js |
+| A66 | Medium | `upgrade-contract.js` s'exécutait en tant que déployeur, or `RolesNotDistinct` interdit par construction que le déployeur détienne `UPGRADER_ROLE` : le seul chemin d'upgrade documenté revertait systématiquement | Résolution du signataire via `UPGRADER_ADDRESS` + contrôle `hasRole` préalable avec message actionnable ; `makeUpgrades(hre, connection)` aligné sur les scripts de déploiement | (scripts) |
+| A62 | Medium | `deactivateOracle`/`deregisterOracle` n'agissaient jamais sur `_regionSubmissions` : une valeur soumise avec une clé ensuite reconnue compromise continuait d'alimenter le consensus, sans moyen de la révoquer. `_rewardOracle` réécrivait par ailleurs une réputation sur un enregistrement supprimé | Filtrage sur `isActive` dans `_countFreshSubmissions` **et** `_calculateConsensus` (maintenus en phase) + garde `registeredAt == 0` dans `_rewardOracle`/`_penalizeOracle` | AuditV6Fixes.test.js |
+| A70 | Medium | Les commandes CLI du relayer appelaient `_connect()` sans `initializeProviders()`, donc `auditLogger.logFile` restait nul et **toutes** les entrées d'audit étaient jetées sans erreur — y compris les `INCIDENT` de règlement nécessaires à la réconciliation manuelle | `auditLogger.initialize()` déplacé dans `_connect()` (le seul point de passage commun) + mode dégradé bruyant sur stderr au lieu d'un `return` muet | AuditV6Fixes.test.js |
+| A69 | Medium | `loadBeneficiaryRegistry` avalait lecture et parsing dans un seul `try/catch` renvoyant `{}` : une virgule en trop équivalait à un fichier absent, le relayer démarrait puis marquait FAILED chaque paiement on-chain, derrière un message pointant la mauvaise cause | Seul `ENOENT` est toléré ; toute erreur de parsing ou de forme lève. Recherche de bénéficiaire rendue insensible à la casse hexadécimale | AuditV6Fixes.test.js |
+| A71 | Medium | Le correctif A45 avait fixé la clé d'idempotence sur `paymentId` seul ; or `retryPayment()` réutilise ce même id, donc une relance délibérée était identique octet pour octet à la tentative échouée — un point de terminaison idempotent rejoue sa réponse en cache et la relance ne s'exécute jamais | Clé composée `paymentId-retryCount`, `retryCount` propagé depuis l'événement `PaymentRetried` ; en-tête d'idempotence ajouté aux 4 adaptateurs | AuditV6Fixes.test.js |
+| A68 | Low | La garde anti-cycle du correctif A58 utilisait un `WeakSet` global à toute la descente : un objet référencé deux fois sans cycle (graphe acyclique, banal dans une réponse d'API) voyait sa seconde occurrence remplacée par `"[Circular]"` | Suivi du **chemin courant** et non des objets déjà vus (`ancestors.delete()` en sortie de branche) | AuditV6Fixes.test.js |
+| A64 | Low | `MockWASDIOracle.simulateHighRisk/LowRisk/Custom` sans aucun contrôle d'accès, alors que `submitSatelliteData` juste au-dessus vérifie `authorizedSubmitters` ; et `deploy-v3.js` le déployait sans garde de réseau | Vérification `authorizedSubmitters` sur les 3 fonctions + erreurs personnalisées ; garde de chainId local dans `deploy-v3.js` | AuditV6Fixes.test.js |
+| A67 | Low | Le job CI `size-check` embarquait sa propre implémentation n'échouant qu'au-delà de la limite dure EIP-170, laissant passer un contrat à 99 % — exactement l'état que le garde-fou existe pour empêcher | Remplacement par `node scripts/check-contract-sizes.js` : une seule implémentation, un seul seuil (95,7 %) | (CI) |
+| A72 | Low | Les adaptateurs Orange et Wave lisaient `await response.text()` dans une variable jamais utilisée — le motif de refus du fournisseur était consommé puis jeté ; Free Money et E-Money ne le lisaient pas du tout | Helper `describeFailure()` partagé par les 4 adaptateurs : corps assaini via `sanitizeForLogging` (une réponse d'erreur peut renvoyer le MSISDN), joint au motif et à l'événement d'audit | AuditV6Fixes.test.js |
+| A73 | Low | En mode simulation, `executeProviderPayment` renvoyait un succès pour `UNKNOWN_PROVIDER` (valeur d'enum hors bornes) → confirmation on-chain d'un paiement qu'aucun adaptateur ne pouvait router | Validation du nom de fournisseur avant simulation | AuditV6Fixes.test.js |
+| A63 | Low | `AttestationExpired` et `DataExpired` déclarés dans les interfaces mais jamais émis : l'expiration est évaluée paresseusement à la lecture, aucune transition d'état n'a lieu. Un indexeur off-chain attendait des événements qui n'arrivent jamais | Déclarations retirées, avec renvoi vers `isExpired()` / `isDataFresh()` | AuditV6Fixes.test.js |
+| R6-12 | Low | 4 fonctions externes sans aucune couverture, dont les deux paginations du correctif M-02 — arithmétique d'index jamais validée | Tests de bornes sur `getTriggerIdsPaginated` / `getBudgetRegionsPaginated`, plus `removeAuthorizedCaller` et `setRiskAlertThreshold` | AuditV6Fixes.test.js |
+
+> Deux hypothèses ont été testées puis **écartées** avant d'entrer dans ce tableau : les `import` ESM
+> du job CI `node -e` fonctionnent bien (Node 22 détecte la syntaxe module), et `approveUpgrade` est
+> bien couvert — via `encodeFunctionData`, forme que la première recherche avait manquée.
+
+### 8.8 Round 6bis — Constats issus de l'exécution réelle des scripts (Août 2026)
+
+Après application des correctifs A61–A73, l'exécution de `verify-deployment.js` puis d'un déploiement
+local complet a révélé 5 défauts supplémentaires, tous dans l'outillage de déploiement — invisibles
+depuis la suite de tests, qui n'exécute jamais ces scripts. **Les cinq sont corrigés**, et validés
+par un cycle `deploy-upgradeable.js` → `verify-deployment.js` de bout en bout sur un nœud local :
+**30 contrôles réussis, 0 échec, code de sortie 0**.
+
+| Finding | Sévérité | Description | Correction |
+|---------|----------|-------------|------------|
+| A76 | **High** | Le correctif A65 accordait bien les rôles à la gouvernance, mais `initialize()` n'enregistre que le propriétaire comme acteur : avec un quorum de 2 et 1 acteur actif, **aucune proposition ne peut jamais atteindre le quorum**. Le chemin d'urgence restait injoignable — A65 était nécessaire mais pas suffisant | Enregistrement d'acteurs via `GOVERNANCE_ACTORS` dans les deux scripts, avec avertissement explicite si le quorum reste hors d'atteinte |
+| A74 | Medium | `findLatestDeployment()` triait les noms de fichiers par ordre lexicographique inverse. Les noms étant `deployment-<réseau>-<ms>.json`, le tri était dominé par le **nom du réseau** : `deployment-hardhat-…` l'emportait toujours sur `deployment-amoy-…` (« h » > « a »). Lancer `--network amoy` vérifiait donc les adresses d'un déploiement local, et affichait le réseau du mauvais manifeste dans son en-tête | Sélection du manifeste dont le `chainId` correspond au réseau connecté, tri sur l'horodatage numérique du nom de fichier, arrêt explicite si aucun manifeste ne correspond |
+| A75 | Medium | À partir de la section 2, les appels RPC n'étaient pas protégés : une erreur réseau tuait le script avant le résumé et avant la logique de code de sortie — transformant un incident passager en stack trace sans verdict. Le contrôle de gouvernance A65 se trouvait dans cette zone et était donc sauté | Chaque `hasRole()` et le `getNetwork()` initial sont encadrés ; une erreur devient un `fail()` enregistré, et le résumé est toujours atteint |
+| A77 | Medium | `deploy-upgradeable.js` câblait MultiOracle sans enregistrer le moindre oracle : `activeOracleCount` restait à 0, sous `MIN_ORACLE_COUNT` (4), donc le consensus n'était jamais calculable et tout trigger passait par le chemin « cold-start » sans contrôle croisé | Enregistrement d'oracles via `ORACLE_ADDRESSES`, aligné sur `deploy-amoy.js` |
+| A78 | Medium | `verify-deployment.js` signalait « acteurs < quorum » comme un simple avertissement, alors que c'est un blocage dur : le plafond de signatures atteignable est le nombre d'acteurs actifs | Devient un `fail()`, plus un nouveau contrôle de cohérence entre `actorList.length` et `activeActorCount` (le plafond réel du recomptage A25) |
+
+> Limite connue : le repli local sur les signataires supplémentaires ne fonctionne pas sur le réseau
+> `localhost`, dont la configuration ne déclare qu'un seul compte (`accounts: [PRIVATE_KEY]`).
+> `GOVERNANCE_ACTORS` et `ORACLE_ADDRESSES` doivent y être fournis explicitement — ce qui est de
+> toute façon le mode d'emploi en production.
+
+
+### 8.9 Audit Round 7 — Revue complète post-architecture (Août 2026)
+
+Audit complet reconduit après application des correctifs d'architecture, en visant en priorité
+le code le moins revu : les correctifs eux-mêmes. **3 findings, tous corrigés.** Le premier est
+une régression introduite par le correctif ARCH-02 du même auteur.
+
+| Finding | Sévérité | Description | Correction |
+|---------|----------|-------------|------------|
+| R7-01 | **Critique** | ARCH-02 transférait la propriété des 5 spokes à la gouvernance en ne whitelistant que `acceptOwnership`. Les 36 autres fonctions `onlyOwner` devenaient **définitivement inatteignables** : le déployeur perdait le droit de les appeler, et `executeProposal` rejetait leur sélecteur. `JokalanteTargeting.updateMerkleRoot` en faisait partie — plus aucune liste de bénéficiaires n'aurait jamais pu être publiée | 30 sélecteurs d'administration whitelistés avant transfert, `pause`/`unpause` sur la liste d'urgence ; nouveau contrôle d'atteignabilité bloquant dans `verify-deployment.js` |
+| R7-02 | Medium | Les tests d'échelle ne liaient pas le registre : l'assertion de 24M mesurait une configuration que la production n'utilise pas. Le surcoût réel de la vérification ARCH-01 (+296 183 gas par lot, +1,59 %) n'était comptabilisé nulle part | `setFloodPredictionContract` ajouté dans les tests 5000/10000 — max mesuré 20,27M, soit 67,6 % d'un bloc Polygon |
+| R7-03 | Medium | `interact-amoy.js` affirmait en commentaire « the deployer owns JokalanteTargeting » et appelait `updateMerkleRoot` directement. Faux depuis ARCH-02 : l'appel reverte et le flux échoue plus loin en `RegionNotActive`, une défaillance de second ordre déroutante | Détection du propriétaire, message indiquant la marche à suivre par proposition de gouvernance, et arrêt explicite de l'étape de seeding |
+
+> **Leçon de ce round** : la zone la plus risquée d'un projet audité six fois n'est pas le code
+> ancien — c'est le correctif écrit la veille. R7-01 aurait gelé le ciblage des bénéficiaires en
+> production, et il a été introduit *par* une correction de sécurité.
+
+> **Conséquence opérationnelle assumée** : `updateMerkleRoot` passe désormais par une proposition
+> de gouvernance avec délai d'exécution. Les listes de bénéficiaires doivent être publiées **en
+> amont de la saison des pluies**, pas pendant un événement.
+
+
+### 8.10 Contre-audit (Août 2026)
+
+Relecture adverse de l'ensemble du travail d'audit : chaque constat rejoué, chaque affirmation
+vérifiée contre le code, chaque correctif testé sur le script qu'il prétendait corriger.
+**2 défauts sérieux trouvés dans les correctifs eux-mêmes, 1 sévérité corrigée, 2 hypothèses écartées.**
+
+| Réf. | Sévérité | Constat | Correction |
+|------|----------|---------|------------|
+| CA-01 | **Critique** | ARCH-01, ARCH-02 et R7-01 n'avaient été appliqués qu'à `deploy-upgradeable.js`. `deploy-amoy.js` — le script de production — ne liait pas le rail de paiement, ne posait aucun plafond journalier et ne transférait pas la propriété des spokes. Un déploiement réel n'aurait obtenu **aucun** des durcissements annoncés comme corrigés | Les trois blocs portés sur `deploy-amoy.js`, validés par exécution réelle sur nœud local (0 échec, exit 0) |
+| CA-02 | Élevé | `deploy-amoy.js` initialise un quorum de 3 mais n'enregistre que 2 acteurs avec un seul `GOVERNANCE_ACTORS`. Combiné à ARCH-02, les spokes restaient en transfert non finalisé — `pendingOwner` pointant sur une gouvernance incapable d'exécuter `acceptOwnership()` | Garde préalable au transfert : le script refuse de transférer si le quorum est hors d'atteinte, en indiquant le nombre exact d'adresses manquantes |
+| CA-03 | — | ARCH-03 était classé « Élevé » sur la foi d'une preuve montrant qu'un gel d'urgence sur `"SN-TH"` ne couvre pas `"sn-th"`. Rejoué : la variante n'ayant pas de budget, le trigger reverte en `InsufficientBudget` avant le contrôle d'urgence. **L'aliasing échoue fermé** | Sévérité ramenée à « Moyen », cadrage « contournement de sécurité » remplacé par « risque opérationnel » |
+| CA-04 | — | Deux hypothèses adverses **écartées** : (a) A61 ne crée pas de DoS permanent sur le commit-reveal — une seconde branche fait avancer le round après expiration du cycle, blocage borné à 12 min ; (b) l'affirmation « en lockstep » d'A62 était exacte, le filtre est bien appliqué dans `_countFreshSubmissions` **et** `_calculateConsensus` | Aucune — vérification concluante |
+
+> **Leçon** : le faux positif le plus dangereux n'est pas le constat inexistant, c'est le correctif
+> appliqué au mauvais chemin. CA-01 affirmait des durcissements réels — sur le script que la
+> production n'utilise pas.
+
 ---
 
 ## 9. Code Coverage Summary
@@ -610,13 +729,15 @@ Second audit complet du projet (7 contrats, relayer off-chain, scripts, configur
 ## Appendix A — Full Test Output Summary
 
 ```
-512 passing (~2m)
+577 passing (~2m)
 
 Test Suites:
   ✅ AuditFixValidation.test.js      — 17 tests
   ✅ AuditV2Fixes.test.js             — 22 tests
   ✅ AuditV3Fixes.test.js             — 14 tests
   ✅ AuditV4Fixes.test.js             — 11 tests
+  ✅ AuditV5Fixes.test.js             — 23 tests
+  ✅ AuditV6Fixes.test.js             — 32 tests
   ✅ BatchBeneficiaries1000.test.js   —  7 tests
   ✅ BatchBeneficiaries2000.test.js   —  8 tests
   ✅ BatchBeneficiaries3000.test.js   —  8 tests
@@ -632,9 +753,9 @@ Test Suites:
   ✅ SecurityFixes.test.js            — 17 tests
   ✅ WASDIOracleConnector.test.js     — 42 tests
   ─────────────────────────────────────────────
-  Total: 512 passing | 0 failing | 0 pending
+  Total: 577 passing | 0 failing | 0 pending
 ```
 
 ---
 
-*Document généré à partir d'une exécution de tests live sur Hardhat 3.x EDR — mis à jour Juillet 2026 (post-Audit Round 4)*
+*Document généré à partir d'une exécution de tests live sur Hardhat 3.x EDR — mis à jour Août 2026 (post-Audit Round 6)*

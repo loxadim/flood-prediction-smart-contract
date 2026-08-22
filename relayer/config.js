@@ -14,13 +14,17 @@ export function getConfig() {
     mobileMoneyProviderAddress: env.MOBILE_MONEY_PROVIDER_ADDRESS,
     wasdiOracleConnectorAddress: env.WASDI_ORACLE_CONNECTOR_ADDRESS || null,
     beneficiaryRegistryPath: env.BENEFICIARY_REGISTRY_PATH || DEFAULT_REGISTRY_PATH,
-    // A30 fix: default to SIMULATION while the Orange Money / Wave provider APIs are still
-    // being negotiated. If no provider API key is configured, run in simulation mode so the
-    // on-chain flow (initiate -> confirm) works end-to-end without attempting real transfers.
-    // An explicit SIMULATE_PAYMENTS env value always wins.
-    simulatePayments: env.SIMULATE_PAYMENTS != null
-      ? env.SIMULATE_PAYMENTS === 'true'
-      : !(env.ORANGE_MONEY_API_KEY || env.WAVE_API_KEY || env.FREE_MONEY_API_KEY || env.EMONEY_API_KEY),
+    // A8-05 fix: simulation is now an explicit opt-in, never an inferred fallback.
+    //
+    // The A30 default flipped to simulation whenever no provider key was present. The
+    // intent was convenience while the Orange Money / Wave contracts were being
+    // negotiated, but the trigger was an ABSENCE: a secret that failed to mount, a
+    // renamed variable, a container redeployed without its env file all silently put a
+    // production relayer into make-believe mode — while it kept writing real
+    // confirmPayment transactions on-chain, marking payments CONFIRMED and inflating
+    // totalDisbursed for transfers that never happened. A mode that moves money on paper
+    // must be chosen, not inherited from a missing string.
+    simulatePayments: env.SIMULATE_PAYMENTS === 'true',
     providerApiKeys: {
       ORANGE_MONEY: env.ORANGE_MONEY_API_KEY || null,
       WAVE: env.WAVE_API_KEY || null,
@@ -43,6 +47,52 @@ export function getConfig() {
   }
 
   return config;
+}
+
+/**
+ * A8-05 fix: refuse to start in the state that used to be the silent default — no
+ * provider credentials and no explicit simulation flag.
+ *
+ * Deliberately separate from getConfig(), which is called on every payment: this is a
+ * startup policy check, not a per-call one, and the adapters have their own
+ * PROVIDER_NOT_CONFIGURED path for an individual provider that is missing credentials
+ * (A40). Failing here is loud and recoverable; starting is not.
+ *
+ * @param {object} config Result of getConfig()
+ */
+export function assertPaymentModeConfigured(config) {
+  const hasAnyProviderKey = PROVIDER_NAMES.some((name) => config.providerApiKeys[name]);
+  if (!config.simulatePayments && !hasAnyProviderKey) {
+    throw new Error(
+      'No Mobile Money provider is configured and SIMULATE_PAYMENTS is not set to "true". ' +
+      'Set at least one of ORANGE_MONEY_API_KEY / WAVE_API_KEY / FREE_MONEY_API_KEY / ' +
+      'EMONEY_API_KEY, or set SIMULATE_PAYMENTS=true to run against no real provider. ' +
+      'Refusing to start: a relayer with neither would confirm payments on-chain that ' +
+      'were never executed.'
+    );
+  }
+}
+
+/** Chain IDs on which simulated payments are acceptable (local development only). */
+const SIMULATION_ALLOWED_CHAIN_IDS = new Set([1337n, 31337n]);
+
+/**
+ * A8-05 fix: simulation confirms payments on-chain without moving money. That is a
+ * legitimate development aid and a dangerous production state, so it is refused anywhere
+ * but a local chain. Checked at connection time because the chain ID is only known then.
+ *
+ * @param {bigint} chainId Chain ID reported by the connected provider
+ * @param {boolean} simulatePayments Whether simulation mode is active
+ */
+export function assertSimulationAllowed(chainId, simulatePayments) {
+  if (!simulatePayments) return;
+  if (!SIMULATION_ALLOWED_CHAIN_IDS.has(BigInt(chainId))) {
+    throw new Error(
+      `SIMULATE_PAYMENTS=true on chain ${chainId}, which is not a local network. ` +
+      'Simulated payments are confirmed on-chain as if they had been executed, so they ' +
+      'must never run against a public network. Configure real provider credentials.'
+    );
+  }
 }
 
 export function providerNameFromIndex(index) {

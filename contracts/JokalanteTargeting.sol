@@ -52,6 +52,12 @@ contract JokalanteTargeting is IJokalanteTargeting, Ownable2Step {
     uint256 public maxBeneficiariesPerRegion = 50000;
 
     // ============================================
+    // Events (additional to IJokalanteTargeting)
+    // ============================================
+    /// @notice A56 fix: emitted when a region's root expiry is extended without rotating the root
+    event RegionExpiryExtended(string indexed region, uint256 newExpiresAt);
+
+    // ============================================
     // Errors
     // ============================================
     error InvalidMerkleRoot();
@@ -116,6 +122,38 @@ contract JokalanteTargeting is IJokalanteTargeting, Ownable2Step {
         }
 
         emit MerkleRootUpdated(region, merkleRoot, beneficiaryCount);
+    }
+
+    /**
+     * @dev Extend a region's Merkle root expiry WITHOUT rotating the root.
+     *
+     * A56 fix. `verifyBeneficiary()` reverts with `MerkleRootExpired` rather than
+     * returning false, and FloodPredictionContract calls it without try/catch. A region
+     * whose root aged past `defaultExpiryDuration` (90 days) mid-event therefore blocked
+     * every remaining payment batch of an in-flight trigger — and the only way to refresh
+     * the expiry was `updateMerkleRoot()`, which forces a root change.
+     *
+     * Eligibility itself is unaffected: FloodPredictionContract verifies proofs against
+     * the root snapshotted at trigger creation (A20 fix), so extending the window here
+     * cannot alter who is payable for an already-created event.
+     *
+     * @param region Region whose expiry to extend
+     * @param additionalDuration Seconds to add (1 day – 365 days)
+     */
+    function extendRegionExpiry(
+        string calldata region,
+        uint256 additionalDuration
+    ) external onlyOwner {
+        if (!_regionExists[region]) revert RegionNotActive();
+        if (additionalDuration < 1 days || additionalDuration > 365 days) revert InvalidExpiryDuration();
+
+        TargetingCriteria storage criteria = _criteria[region];
+        // Extend from now when the root has already lapsed, otherwise from the current
+        // expiry — so a late call never silently shortens the remaining window.
+        uint256 base = block.timestamp > criteria.expiresAt ? block.timestamp : criteria.expiresAt;
+        criteria.expiresAt = base + additionalDuration;
+
+        emit RegionExpiryExtended(region, criteria.expiresAt);
     }
 
     /**

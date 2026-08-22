@@ -249,7 +249,8 @@ describe("MobileMoneyProvider", function () {
             const phones = [VALID_PHONE_HASH, WAVE_PHONE_HASH];
 
             const tx = await sonatel.connect(relayer1).batchInitiatePayments(
-                hashes, amounts, phones, REGION, [0, 0]
+                hashes, amounts, phones, REGION, [0, 0],
+                ""
             );
             expect(await sonatel.totalPaymentsInitiated()).to.equal(2);
         });
@@ -261,7 +262,8 @@ describe("MobileMoneyProvider", function () {
 
             await expect(
                 sonatel.connect(relayer1).batchInitiatePayments(
-                    hashes, amounts, phones, REGION, new Array(101).fill(0)
+                    hashes, amounts, phones, REGION, new Array(101).fill(0),
+                    ""
                 )
             ).to.be.revertedWithCustomError(sonatel, "BatchTooLarge");
         });
@@ -273,7 +275,8 @@ describe("MobileMoneyProvider", function () {
                     [AMOUNT, AMOUNT],
                     [VALID_PHONE_HASH],
                     REGION,
-                    [0]
+                    [0],
+                    ""
                 )
             ).to.be.revertedWithCustomError(sonatel, "ArrayLengthMismatch");
         });

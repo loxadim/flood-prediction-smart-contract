@@ -90,7 +90,7 @@ describe("Batch Beneficiaries — Scale Tests", function () {
         );
 
         await floodPrediction.grantRole(OPERATOR_ROLE, operator.address);
-        await floodPrediction.allocateBudget("SN-TH", ethers.parseEther("500000000"));
+        await floodPrediction.allocateBudget("SN-TH", 100_000_000n);
 
         // Register FloodPrediction as relayer on MobileMoneyProvider
         await mobileMoney.addRelayer(await floodPrediction.getAddress());
@@ -196,7 +196,7 @@ describe("Batch Beneficiaries — Scale Tests", function () {
             let totalPaid = 0;
 
             for (let batch = 0; batch < 4; batch++) {
-                await floodPrediction.allocateBudget(regions[batch], ethers.parseEther("500000000"));
+                await floodPrediction.allocateBudget(regions[batch], 100_000_000n);
                 await jokalante.updateMerkleRoot(regions[batch], merkleRoot, 1000);
 
                 await floodPrediction.connect(operator).createFloodTrigger(

@@ -25,21 +25,26 @@
 
 ## 1. Executive Summary
 
-The OPAL Platform smart contract suite has been **successfully deployed** on Polygon Amoy testnet on **3 April 2026**. All 512 unit tests pass across 18 test files, comprehensive security auditing has been completed with all 28 findings remediated (+ 6 from the April 2026 round, 14 from the June 2026 full-project audit round, and 15 from the July 2026 full-project audit round — all fixed), and batch scalability has been validated up to 10,000 beneficiaries. This report documents the deployment results, configuration procedures, and performance benchmarks for the pilot phase.
+> ⚠️ **Le déploiement Amoy décrit ici date du 3 avril 2026 et est ANTÉRIEUR à tous les correctifs
+> des rounds d'audit 3 à 7 et de la revue d'architecture.** Les contrats en ligne sur Amoy ne
+> contiennent aucun de ces durcissements. Ce rapport documente la campagne pilote d'avril ; il ne
+> décrit pas l'état du code courant. Un redéploiement est requis avant toute reprise du pilote.
+
+The OPAL Platform smart contract suite was **deployed** on Polygon Amoy testnet on **3 April 2026**. All 577 unit tests pass across 21 test files, comprehensive security auditing has been completed with all 28 findings remediated (+ 6 from the April 2026 round, 14 from the June 2026 full-project audit round, 15 from the July 2026 full-project audit round, 12 from the August 2026 full-project audit round, 13 from the August 2026 round 6 full-project audit, and 6 structural findings from the August 2026 architecture review — all fixed), and batch scalability has been validated up to 10,000 beneficiaries. This report documents the deployment results, configuration procedures, and performance benchmarks for the pilot phase.
 
 ### Deployment Readiness (État au juin 2026)
 
 | Criterion | Status | Details |
 |-----------|--------|---------|
 | Smart Contract Code | ✅ Complete | 7 contracts + 1 library, v1.0.0 |
-| Test Suite | ✅ 512/512 passing | 18 test files, 100% pass rate |
+| Test Suite | ✅ 577/577 passing | 21 test files, 100% pass rate |
 | Security Audit — Round 1 | ✅ 28/28 fixed | All H/C/M/L findings remediated |
 | Security Audit — Round 2 | ✅ 6/6 fixed | C-1, C-2, H-1, H-2, H-3, H-4 (avril 2026) |
 | Security Audit — Round 3 | ✅ 14/14 fixed | Full-project audit across 5 contracts + scripts + relayer (juin 2026) |
 | Deployment Script | ✅ Executed | Resumable deploy-amoy.js |
 | UUPS Proxy Pattern | ✅ Validated | 2 upgradeable contracts tested |
 | Scale Testing | ✅ 10,000 beneficiaries | Up to 200 batches × 50 validated |
-| Gas Analysis | ✅ Complete | ~280,000 gas/beneficiary |
+| Gas Analysis | ✅ Complete | 394,082 gas/bénéficiaire mesuré ; 19,9M max par lot de 50 (66 % d'un bloc Polygon) |
 | Testnet Wallet | ✅ Configuré | `0x135D3c5310046763b6bdA8A8ac0f507E1eEB1fF6` |
 | MATIC Testnet Funds | ✅ Suffisant | Déploiement réalisé avec succès |
 | RPC Amoy | ✅ Opérationnel | `https://polygon-amoy.drpc.org` |
@@ -118,7 +123,7 @@ The OPAL Platform smart contract suite has been **successfully deployed** on Pol
 | Check | Status | Evidence |
 |-------|--------|---------|
 | All contracts compile without errors | ✅ | `npx hardhat compile` → success |
-| All 512 tests pass | ✅ | `npx hardhat test` → 512 passing (~2m) |
+| All 577 tests pass | ✅ | `npx hardhat test` → 577 passing (~2m) |
 | No Solhint warnings (critical) | ✅ | solhint ^6.1.0 configured |
 | Storage gaps in upgradeable contracts | ✅ | __gap[47] (FPC), __gap[45] (GOV) |
 | _disableInitializers() in constructors | ✅ | Both UUPS contracts |
@@ -281,7 +286,7 @@ await multiOracle.registerOracle(oracle4Address, "WASDI-Landsat");
 ### 6.1 Overall Results
 
 ```
-512 passing (~2m)
+577 passing (~2m)
 0 failing
 0 pending
 ```
@@ -301,6 +306,9 @@ await multiOracle.registerOracle(oracle4Address, "WASDI-Landsat");
 | AuditV2Fixes.test.js | Audit regression | 22 | ✅ |
 | AuditFixValidation.test.js | Audit Round 2 regression | 17 | ✅ |
 | AuditV3Fixes.test.js | Audit Round 3 regression (full-project) | 14 | ✅ |
+| AuditV4Fixes.test.js | Audit Round 4 regression (full-project) | 11 | ✅ |
+| AuditV5Fixes.test.js | Audit Round 5 regression (full-project) | 23 | ✅ |
+| AuditV6Fixes.test.js | Audit Round 6 regression (full-project) | 32 | ✅ |
 | Relayer.test.js | Relayer service (off-chain) | 9 | ✅ |
 | BatchBeneficiaries1000.test.js | Scale (1K) | 7 | ✅ |
 | BatchBeneficiaries2000.test.js | Scale (2K) | 8 | ✅ |

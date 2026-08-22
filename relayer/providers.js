@@ -1,11 +1,60 @@
-import { getConfig } from './config.js';
-import { validateTLSCertificate, sanitizeForLogging, hashSensitiveData } from './crypto.js';
+import { getConfig, getSdkProviderNames } from './config.js';
+// A58 fix: sanitizeForLogging was imported here but never called — this module only
+// ever hands scalars (paymentId, provider, amount, status) to the audit logger, so the
+// import advertised a protection that was not in force. It is applied in service.js,
+// where beneficiary phone numbers actually flow.
+import { validateTLSCertificate, hashSensitiveData } from './crypto.js';
 import {
   auditLogger,
   certificateMonitor,
   anomalyDetector,
   rateLimitTracker,
 } from './security.js';
+import { sanitizeForLogging } from './crypto.js';
+
+/**
+ * A71 fix: build the provider idempotency key from paymentId AND retryCount.
+ *
+ * The A45 fix had pinned it to paymentId alone, to stop a network resend being treated
+ * as a fresh request and double-disbursing. But retryPayment() reuses the same
+ * paymentId by design, so a deliberate retry became byte-identical to the attempt that
+ * had just failed: an idempotent endpoint replays its cached response, the retry never
+ * executes, and depending on the status returned the relayer may confirm on-chain a
+ * transfer that never happened.
+ *
+ * Composing the two satisfies both requirements at once — a resend within one attempt
+ * keeps its key and stays deduplicated, while a new attempt opens a new key.
+ */
+export function idempotencyKey(paymentRequest) {
+  return `${paymentRequest.paymentId}-${paymentRequest.retryCount ?? 0}`;
+}
+
+/**
+ * A72 fix: capture the provider's error body instead of discarding it.
+ *
+ * The Orange and Wave adapters read `await response.text()` into a variable they never
+ * used, so the single most useful diagnostic — the provider's stated reason for
+ * refusing — was consumed and thrown away; Free Money and E-Money never read it at
+ * all. The body is run through sanitizeForLogging because an error payload can echo
+ * back the MSISDN.
+ */
+export async function describeFailure(providerLabel, response) {
+  let body = '';
+  try {
+    body = await response.text();
+  } catch {
+    body = '<unreadable>';
+  }
+  const safe = typeof body === 'string' ? body.slice(0, 500) : '';
+  await auditLogger.logSecurityEvent(
+    'PROVIDER_REJECTED', 'WARNING',
+    `${providerLabel} returned ${response.status}`,
+    sanitizeForLogging({ status: response.status, body: safe })
+  );
+  return safe
+    ? `${providerLabel} returned ${response.status}: ${safe}`
+    : `${providerLabel} returned ${response.status}`;
+}
 
 /**
  * Orange Money Sandbox Adapter
@@ -25,6 +74,9 @@ class OrangeMoneyAdapter {
       return;
     }
     validateTLSCertificate(this.apiUrl);
+    // A8-10 fix: register the endpoint so the six-hourly expiry check has something to
+    // inspect. It previously iterated a map no code path ever wrote to.
+    certificateMonitor.registerEndpoint('ORANGE_MONEY', this.apiUrl);
   }
 
   async execute(paymentRequest) {
@@ -51,15 +103,24 @@ class OrangeMoneyAdapter {
       subscriberMsisdn: paymentRequest.phoneNumber,
       merchantId: this.merchantId,
       description: `Payment for beneficiary ${hashSensitiveData(paymentRequest.beneficiaryHash)}`,
-      callbackUrl: process.env.ORANGE_MONEY_CALLBACK_URL || null,
     };
+
+    // A8-10 fix: only advertise a callback URL when one is actually configured. The field
+    // used to be sent as an explicit `null`, which announces a receiver this service does
+    // not run — there is no HTTP listener anywhere in the relayer. Asking a provider to
+    // call back into nothing invites a settlement that never arrives; omitting the field
+    // keeps the exchange synchronous, which is what the code actually implements.
+    const callbackUrl = process.env.ORANGE_MONEY_CALLBACK_URL;
+    if (callbackUrl) body.callbackUrl = callbackUrl;
 
     const headers = {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${this.apiKey}`,
-      // A45 fix: keyed on paymentId alone — appending Date.now() made every retry a
-      // new request for Orange's dedup, allowing duplicate disbursements on retry.
-      'X-Request-ID': paymentRequest.paymentId,
+      // A45 fix: never Date.now() — that made every resend a new request for Orange's
+      // dedup and allowed duplicate disbursements.
+      // A71 fix: paymentId + retryCount, so a deliberate retry is a new request while
+      // a resend of the same attempt stays deduplicated.
+      'X-Request-ID': idempotencyKey(paymentRequest),
     };
 
     try {
@@ -73,13 +134,10 @@ class OrangeMoneyAdapter {
       await auditLogger.logAuthAttempt('ORANGE_MONEY', response.ok, response.status);
 
       if (!response.ok) {
-        const text = await response.text();
+        const reason = await describeFailure('Orange Money', response); // A72 fix
         await auditLogger.logPaymentRequest(paymentRequest.paymentId, 'ORANGE_MONEY', paymentRequest.amount, 'FAILED');
         anomalyDetector.recordRequest('ORANGE_MONEY', 'failed');
-        return {
-          success: false,
-          reason: `Orange Money returned ${response.status}`,
-        };
+        return { success: false, reason };
       }
 
       const payload = await response.json();
@@ -114,6 +172,7 @@ class WaveAdapter {
       return;
     }
     validateTLSCertificate(this.apiUrl);
+    certificateMonitor.registerEndpoint('WAVE', this.apiUrl);  // A8-10 fix
   }
 
   async execute(paymentRequest) {
@@ -147,7 +206,7 @@ class WaveAdapter {
     const headers = {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${this.apiKey}`,
-      'X-Idempotency-Key': paymentRequest.paymentId,
+      'X-Idempotency-Key': idempotencyKey(paymentRequest), // A71 fix
     };
 
     try {
@@ -161,13 +220,10 @@ class WaveAdapter {
       await auditLogger.logAuthAttempt('WAVE', response.ok, response.status);
 
       if (!response.ok) {
-        const text = await response.text();
+        const reason = await describeFailure('Wave', response); // A72 fix
         await auditLogger.logPaymentRequest(paymentRequest.paymentId, 'WAVE', paymentRequest.amount, 'FAILED');
         anomalyDetector.recordRequest('WAVE', 'failed');
-        return {
-          success: false,
-          reason: `Wave returned ${response.status}`,
-        };
+        return { success: false, reason };
       }
 
       const payload = await response.json();
@@ -201,6 +257,7 @@ class FreeMoneyAdapter {
       return;
     }
     validateTLSCertificate(this.apiUrl);
+    certificateMonitor.registerEndpoint('FREE_MONEY', this.apiUrl);  // A8-10 fix
   }
 
   async execute(paymentRequest) {
@@ -228,6 +285,7 @@ class FreeMoneyAdapter {
     const headers = {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${this.apiKey}`,
+      'X-Idempotency-Key': idempotencyKey(paymentRequest), // A71 fix
     };
 
     try {
@@ -241,9 +299,10 @@ class FreeMoneyAdapter {
       await auditLogger.logAuthAttempt('FREE_MONEY', response.ok, response.status);
 
       if (!response.ok) {
+        const reason = await describeFailure('Free Money', response); // A72 fix
         await auditLogger.logPaymentRequest(paymentRequest.paymentId, 'FREE_MONEY', paymentRequest.amount, 'FAILED');
         anomalyDetector.recordRequest('FREE_MONEY', 'failed');
-        return { success: false, reason: `Free Money returned ${response.status}` };
+        return { success: false, reason };
       }
 
       const payload = await response.json();
@@ -277,6 +336,7 @@ class EmoneyAdapter {
       return;
     }
     validateTLSCertificate(this.apiUrl);
+    certificateMonitor.registerEndpoint('EMONEY', this.apiUrl);  // A8-10 fix
   }
 
   async execute(paymentRequest) {
@@ -304,6 +364,7 @@ class EmoneyAdapter {
     const headers = {
       'Content-Type': 'application/json',
       'X-API-Key': this.apiKey,
+      'X-Idempotency-Key': idempotencyKey(paymentRequest), // A71 fix
     };
 
     try {
@@ -317,9 +378,10 @@ class EmoneyAdapter {
       await auditLogger.logAuthAttempt('EMONEY', response.ok, response.status);
 
       if (!response.ok) {
+        const reason = await describeFailure('E-Money', response); // A72 fix
         await auditLogger.logPaymentRequest(paymentRequest.paymentId, 'EMONEY', paymentRequest.amount, 'FAILED');
         anomalyDetector.recordRequest('EMONEY', 'failed');
-        return { success: false, reason: `E-Money returned ${response.status}` };
+        return { success: false, reason };
       }
 
       const payload = await response.json();
@@ -370,6 +432,16 @@ export async function executeProviderPayment(providerName, paymentRequest) {
   const config = getConfig();
 
   if (config.simulatePayments) {
+    // A73 fix: validate the provider name even in simulation mode. providerNameFromIndex
+    // returns 'UNKNOWN_PROVIDER' for an out-of-range enum value, and simulation used to
+    // report success for it — confirming on-chain a payment no adapter could ever route.
+    if (!getSdkProviderNames().includes(providerName)) {
+      await auditLogger.logSecurityEvent(
+        'UNKNOWN_PROVIDER', 'ERROR',
+        `Refusing to simulate a payment for unknown provider "${providerName}"`
+      );
+      return { success: false, reason: `UNKNOWN_PROVIDER:${providerName}` };
+    }
     await auditLogger.logPaymentRequest(paymentRequest.paymentId, providerName, paymentRequest.amount, 'SIMULATED');
     return {
       success: true,
