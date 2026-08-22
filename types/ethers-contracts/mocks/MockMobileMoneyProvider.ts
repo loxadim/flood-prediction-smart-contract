@@ -13,7 +13,7 @@ export declare namespace IMobileMoneyProvider {
     }
 
   export interface MockMobileMoneyProviderInterface extends Interface {
-    getFunction(nameOrSignature: "autoConfirm" | "autoFail" | "autoFailReason" | "batchCallCount" | "batchConfirmPayments" | "batchInitiatePayments" | "confirmPayment" | "failPayment" | "forceRevert" | "getPayment" | "getPaymentHistoryLength" | "getPaymentStatus" | "getPendingPaymentCount" | "getTotalDisbursed" | "initiatePayment" | "lastBatchSize" | "paymentHistory" | "pendingCount" | "retryPayment" | "setAutoConfirm" | "setAutoFail" | "setForceRevert" | "simulateExpiry" | "totalConfirmed" | "totalFailed" | "totalInitiated"): FunctionFragment;
+    getFunction(nameOrSignature: "autoConfirm" | "autoFail" | "autoFailReason" | "batchCallCount" | "batchConfirmPayments" | "batchInitiatePayments" | "confirmPayment" | "failPayment" | "forceRevert" | "getPayment" | "getPaymentHistoryLength" | "getPaymentStatus" | "getPendingPaymentCount" | "getTotalDisbursed" | "initiatePayment" | "lastBatchSize" | "lastEventId" | "paymentHistory" | "pendingCount" | "retryPayment" | "setAutoConfirm" | "setAutoFail" | "setForceRevert" | "simulateExpiry" | "totalConfirmed" | "totalFailed" | "totalInitiated"): FunctionFragment;
 
     getEvent(nameOrSignatureOrTopic: "BatchPaymentInitiated" | "PaymentConfirmed" | "PaymentExpired" | "PaymentFailed" | "PaymentInitiated" | "PaymentRetried"): EventFragment;
 
@@ -22,7 +22,7 @@ encodeFunctionData(functionFragment: 'autoFail', values?: undefined): string;
 encodeFunctionData(functionFragment: 'autoFailReason', values?: undefined): string;
 encodeFunctionData(functionFragment: 'batchCallCount', values?: undefined): string;
 encodeFunctionData(functionFragment: 'batchConfirmPayments', values: [BytesLike[], string[]]): string;
-encodeFunctionData(functionFragment: 'batchInitiatePayments', values: [BytesLike[], BigNumberish[], BytesLike[], string, BigNumberish[]]): string;
+encodeFunctionData(functionFragment: 'batchInitiatePayments', values: [BytesLike[], BigNumberish[], BytesLike[], string, BigNumberish[], string]): string;
 encodeFunctionData(functionFragment: 'confirmPayment', values: [BytesLike, string]): string;
 encodeFunctionData(functionFragment: 'failPayment', values: [BytesLike, string]): string;
 encodeFunctionData(functionFragment: 'forceRevert', values?: undefined): string;
@@ -33,6 +33,7 @@ encodeFunctionData(functionFragment: 'getPendingPaymentCount', values?: undefine
 encodeFunctionData(functionFragment: 'getTotalDisbursed', values?: undefined): string;
 encodeFunctionData(functionFragment: 'initiatePayment', values: [BytesLike, BigNumberish, BytesLike, string, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'lastBatchSize', values?: undefined): string;
+encodeFunctionData(functionFragment: 'lastEventId', values?: undefined): string;
 encodeFunctionData(functionFragment: 'paymentHistory', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'pendingCount', values?: undefined): string;
 encodeFunctionData(functionFragment: 'retryPayment', values: [BytesLike]): string;
@@ -60,6 +61,7 @@ decodeFunctionResult(functionFragment: 'getPendingPaymentCount', data: BytesLike
 decodeFunctionResult(functionFragment: 'getTotalDisbursed', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'initiatePayment', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'lastBatchSize', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'lastEventId', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'paymentHistory', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'pendingCount', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'retryPayment', data: BytesLike): Result;
@@ -220,7 +222,7 @@ decodeFunctionResult(functionFragment: 'totalInitiated', data: BytesLike): Resul
 
     
     batchInitiatePayments: TypedContractMethod<
-      [beneficiaryHashes: BytesLike[], amounts: BigNumberish[], phoneHashes: BytesLike[], region: string, providers: BigNumberish[], ],
+      [beneficiaryHashes: BytesLike[], amounts: BigNumberish[], phoneHashes: BytesLike[], region: string, providers: BigNumberish[], eventId: string, ],
       [string[]],
       'nonpayable'
     >
@@ -302,6 +304,14 @@ decodeFunctionResult(functionFragment: 'totalInitiated', data: BytesLike): Resul
     lastBatchSize: TypedContractMethod<
       [],
       [bigint],
+      'view'
+    >
+    
+
+    
+    lastEventId: TypedContractMethod<
+      [],
+      [string],
       'view'
     >
     
@@ -415,7 +425,7 @@ getFunction(nameOrSignature: 'batchConfirmPayments'): TypedContractMethod<
       'nonpayable'
     >;
 getFunction(nameOrSignature: 'batchInitiatePayments'): TypedContractMethod<
-      [beneficiaryHashes: BytesLike[], amounts: BigNumberish[], phoneHashes: BytesLike[], region: string, providers: BigNumberish[], ],
+      [beneficiaryHashes: BytesLike[], amounts: BigNumberish[], phoneHashes: BytesLike[], region: string, providers: BigNumberish[], eventId: string, ],
       [string[]],
       'nonpayable'
     >;
@@ -467,6 +477,11 @@ getFunction(nameOrSignature: 'initiatePayment'): TypedContractMethod<
 getFunction(nameOrSignature: 'lastBatchSize'): TypedContractMethod<
       [],
       [bigint],
+      'view'
+    >;
+getFunction(nameOrSignature: 'lastEventId'): TypedContractMethod<
+      [],
+      [string],
       'view'
     >;
 getFunction(nameOrSignature: 'paymentHistory'): TypedContractMethod<

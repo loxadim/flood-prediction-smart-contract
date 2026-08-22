@@ -23,9 +23,9 @@ export declare namespace IMultiOracle {
     }
 
   export interface MultiOracleInterface extends Interface {
-    getFunction(nameOrSignature: "COMMIT_PHASE_DURATION" | "INITIAL_REPUTATION" | "IQR_MULTIPLIER_DEN" | "IQR_MULTIPLIER_NUM" | "MAX_ORACLES" | "MAX_REPUTATION" | "MAX_RISK_SCORE" | "MIN_ORACLE_COUNT" | "MIN_RISK_SCORE" | "REPUTATION_BONUS" | "REPUTATION_PENALTY" | "REVEAL_WINDOW" | "acceptOwnership" | "activeOracleCount" | "commitData" | "consensusComputedForRound" | "consensusThreshold" | "currentRound" | "dataFreshnessThreshold" | "deactivateOracle" | "getActiveOracleCount" | "getAllOracles" | "getConsensus" | "getConsensusRiskScore" | "getFreshSubmissionCount" | "getOracleAtIndex" | "getOracleCount" | "getOracleInfo" | "getOracleReputation" | "getRegionSubmissionCount" | "getRegionSubmissions" | "getRequiredSubmissions" | "governance" | "hasOracleSubmitted" | "isConsensusReached" | "maxConsecutiveOutliers" | "oracleList" | "owner" | "pause" | "paused" | "pendingOwner" | "reactivateOracle" | "registerOracle" | "renounceOwnership" | "revealData" | "roundCommitStart" | "setConsensusThreshold" | "setDataFreshnessThreshold" | "setGovernance" | "setMaxConsecutiveOutliers" | "submitData" | "transferOwnership" | "unpause"): FunctionFragment;
+    getFunction(nameOrSignature: "COMMIT_PHASE_DURATION" | "INITIAL_REPUTATION" | "IQR_MULTIPLIER_DEN" | "IQR_MULTIPLIER_NUM" | "MAX_ORACLES" | "MAX_REPUTATION" | "MAX_RISK_SCORE" | "MIN_ORACLE_COUNT" | "MIN_RISK_SCORE" | "REPUTATION_BONUS" | "REPUTATION_PENALTY" | "REVEAL_WINDOW" | "acceptOwnership" | "activeOracleCount" | "commitData" | "consensusComputedForRound" | "consensusThreshold" | "currentRound" | "dataFreshnessThreshold" | "deactivateOracle" | "deregisterOracle" | "getActiveOracleCount" | "getAllOracles" | "getConsensus" | "getConsensusRiskScore" | "getFreshSubmissionCount" | "getOracleAtIndex" | "getOracleCount" | "getOracleInfo" | "getOracleReputation" | "getRegionSubmissionCount" | "getRegionSubmissions" | "getRequiredSubmissions" | "governance" | "hasOracleSubmitted" | "isConsensusReached" | "maxConsecutiveOutliers" | "oracleList" | "owner" | "pause" | "paused" | "pendingOwner" | "reactivateOracle" | "registerOracle" | "renounceOwnership" | "revealData" | "roundCommitStart" | "setConsensusThreshold" | "setDataFreshnessThreshold" | "setGovernance" | "setMaxConsecutiveOutliers" | "submitData" | "transferOwnership" | "unpause"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "ConsensusReached" | "ConsensusThresholdUpdated" | "DataCommitted" | "DataFreshnessThresholdUpdated" | "DataRevealed" | "DataSubmitted" | "GovernanceUpdated" | "InsufficientOracleCountWarning" | "MaxConsecutiveOutliersUpdated" | "OracleDeactivated" | "OracleProbationWarning" | "OracleReactivated" | "OracleRegistered" | "OutlierDetected" | "OwnershipTransferStarted" | "OwnershipTransferred" | "Paused" | "ReputationUpdated" | "Unpaused"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "ConsensusReached" | "ConsensusThresholdUpdated" | "DataCommitted" | "DataFreshnessThresholdUpdated" | "DataRevealed" | "DataSubmitted" | "GovernanceUpdated" | "InsufficientOracleCountWarning" | "MaxConsecutiveOutliersUpdated" | "OracleDeactivated" | "OracleDeregistered" | "OracleProbationWarning" | "OracleReactivated" | "OracleRegistered" | "OutlierDetected" | "OwnershipTransferStarted" | "OwnershipTransferred" | "Paused" | "ReputationUpdated" | "Unpaused"): EventFragment;
 
     encodeFunctionData(functionFragment: 'COMMIT_PHASE_DURATION', values?: undefined): string;
 encodeFunctionData(functionFragment: 'INITIAL_REPUTATION', values?: undefined): string;
@@ -47,6 +47,7 @@ encodeFunctionData(functionFragment: 'consensusThreshold', values?: undefined): 
 encodeFunctionData(functionFragment: 'currentRound', values: [string]): string;
 encodeFunctionData(functionFragment: 'dataFreshnessThreshold', values?: undefined): string;
 encodeFunctionData(functionFragment: 'deactivateOracle', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'deregisterOracle', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'getActiveOracleCount', values?: undefined): string;
 encodeFunctionData(functionFragment: 'getAllOracles', values?: undefined): string;
 encodeFunctionData(functionFragment: 'getConsensus', values: [string]): string;
@@ -101,6 +102,7 @@ decodeFunctionResult(functionFragment: 'consensusThreshold', data: BytesLike): R
 decodeFunctionResult(functionFragment: 'currentRound', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'dataFreshnessThreshold', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'deactivateOracle', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'deregisterOracle', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getActiveOracleCount', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getAllOracles', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getConsensus', data: BytesLike): Result;
@@ -246,6 +248,18 @@ decodeFunctionResult(functionFragment: 'unpause', data: BytesLike): Result;
   
 
     export namespace OracleDeactivatedEvent {
+      export type InputTuple = [oracle: AddressLike];
+      export type OutputTuple = [oracle: string];
+      export interface OutputObject {oracle: string };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace OracleDeregisteredEvent {
       export type InputTuple = [oracle: AddressLike];
       export type OutputTuple = [oracle: string];
       export interface OutputObject {oracle: string };
@@ -552,6 +566,14 @@ decodeFunctionResult(functionFragment: 'unpause', data: BytesLike): Result;
 
     
     deactivateOracle: TypedContractMethod<
+      [oracle: AddressLike, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
+    deregisterOracle: TypedContractMethod<
       [oracle: AddressLike, ],
       [void],
       'nonpayable'
@@ -925,6 +947,11 @@ getFunction(nameOrSignature: 'deactivateOracle'): TypedContractMethod<
       [void],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'deregisterOracle'): TypedContractMethod<
+      [oracle: AddressLike, ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'getActiveOracleCount'): TypedContractMethod<
       [],
       [bigint],
@@ -1101,6 +1128,7 @@ getEvent(key: 'GovernanceUpdated'): TypedContractEvent<GovernanceUpdatedEvent.In
 getEvent(key: 'InsufficientOracleCountWarning'): TypedContractEvent<InsufficientOracleCountWarningEvent.InputTuple, InsufficientOracleCountWarningEvent.OutputTuple, InsufficientOracleCountWarningEvent.OutputObject>;
 getEvent(key: 'MaxConsecutiveOutliersUpdated'): TypedContractEvent<MaxConsecutiveOutliersUpdatedEvent.InputTuple, MaxConsecutiveOutliersUpdatedEvent.OutputTuple, MaxConsecutiveOutliersUpdatedEvent.OutputObject>;
 getEvent(key: 'OracleDeactivated'): TypedContractEvent<OracleDeactivatedEvent.InputTuple, OracleDeactivatedEvent.OutputTuple, OracleDeactivatedEvent.OutputObject>;
+getEvent(key: 'OracleDeregistered'): TypedContractEvent<OracleDeregisteredEvent.InputTuple, OracleDeregisteredEvent.OutputTuple, OracleDeregisteredEvent.OutputObject>;
 getEvent(key: 'OracleProbationWarning'): TypedContractEvent<OracleProbationWarningEvent.InputTuple, OracleProbationWarningEvent.OutputTuple, OracleProbationWarningEvent.OutputObject>;
 getEvent(key: 'OracleReactivated'): TypedContractEvent<OracleReactivatedEvent.InputTuple, OracleReactivatedEvent.OutputTuple, OracleReactivatedEvent.OutputObject>;
 getEvent(key: 'OracleRegistered'): TypedContractEvent<OracleRegisteredEvent.InputTuple, OracleRegisteredEvent.OutputTuple, OracleRegisteredEvent.OutputObject>;
@@ -1151,6 +1179,10 @@ getEvent(key: 'Unpaused'): TypedContractEvent<UnpausedEvent.InputTuple, Unpaused
 
       'OracleDeactivated(address)': TypedContractEvent<OracleDeactivatedEvent.InputTuple, OracleDeactivatedEvent.OutputTuple, OracleDeactivatedEvent.OutputObject>;
       OracleDeactivated: TypedContractEvent<OracleDeactivatedEvent.InputTuple, OracleDeactivatedEvent.OutputTuple, OracleDeactivatedEvent.OutputObject>;
+    
+
+      'OracleDeregistered(address)': TypedContractEvent<OracleDeregisteredEvent.InputTuple, OracleDeregisteredEvent.OutputTuple, OracleDeregisteredEvent.OutputObject>;
+      OracleDeregistered: TypedContractEvent<OracleDeregisteredEvent.InputTuple, OracleDeregisteredEvent.OutputTuple, OracleDeregisteredEvent.OutputObject>;
     
 
       'OracleProbationWarning(address,uint256,uint256)': TypedContractEvent<OracleProbationWarningEvent.InputTuple, OracleProbationWarningEvent.OutputTuple, OracleProbationWarningEvent.OutputObject>;

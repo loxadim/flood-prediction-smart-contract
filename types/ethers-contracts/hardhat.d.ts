@@ -13,6 +13,7 @@ declare module "@nomicfoundation/hardhat-ethers/types" {
   getContractFactory(name: 'FloodPredictionContract', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.FloodPredictionContract__factory>
 getContractFactory(name: 'JokalanteTargeting', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.JokalanteTargeting__factory>
 getContractFactory(name: 'KYCAMLCompliance', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.KYCAMLCompliance__factory>
+getContractFactory(name: 'IFloodPaymentLedger', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IFloodPaymentLedger__factory>
 getContractFactory(name: 'MobileMoneyProvider', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.MobileMoneyProvider__factory>
 getContractFactory(name: 'MultiOracle', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.MultiOracle__factory>
 getContractFactory(name: 'OpalGovernanceUpgradeable', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.OpalGovernanceUpgradeable__factory>
@@ -25,6 +26,7 @@ getContractFactory(name: 'MockWASDIOracle', signerOrOptions?: ethers.Signer | Fa
   getContractAt(name: 'FloodPredictionContract', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.FloodPredictionContract>
 getContractAt(name: 'JokalanteTargeting', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.JokalanteTargeting>
 getContractAt(name: 'KYCAMLCompliance', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.KYCAMLCompliance>
+getContractAt(name: 'IFloodPaymentLedger', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IFloodPaymentLedger>
 getContractAt(name: 'MobileMoneyProvider', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.MobileMoneyProvider>
 getContractAt(name: 'MultiOracle', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.MultiOracle>
 getContractAt(name: 'OpalGovernanceUpgradeable', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.OpalGovernanceUpgradeable>
@@ -37,6 +39,7 @@ getContractAt(name: 'MockWASDIOracle', address: string | ethers.Addressable, sig
   deployContract(name: 'FloodPredictionContract', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.FloodPredictionContract>
 deployContract(name: 'JokalanteTargeting', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.JokalanteTargeting>
 deployContract(name: 'KYCAMLCompliance', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.KYCAMLCompliance>
+deployContract(name: 'IFloodPaymentLedger', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IFloodPaymentLedger>
 deployContract(name: 'MobileMoneyProvider', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.MobileMoneyProvider>
 deployContract(name: 'MultiOracle', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.MultiOracle>
 deployContract(name: 'OpalGovernanceUpgradeable', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.OpalGovernanceUpgradeable>
@@ -49,6 +52,7 @@ deployContract(name: 'MockWASDIOracle', signerOrOptions?: ethers.Signer | Deploy
   deployContract(name: 'FloodPredictionContract', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.FloodPredictionContract>
 deployContract(name: 'JokalanteTargeting', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.JokalanteTargeting>
 deployContract(name: 'KYCAMLCompliance', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.KYCAMLCompliance>
+deployContract(name: 'IFloodPaymentLedger', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IFloodPaymentLedger>
 deployContract(name: 'MobileMoneyProvider', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.MobileMoneyProvider>
 deployContract(name: 'MultiOracle', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.MultiOracle>
 deployContract(name: 'OpalGovernanceUpgradeable', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.OpalGovernanceUpgradeable>

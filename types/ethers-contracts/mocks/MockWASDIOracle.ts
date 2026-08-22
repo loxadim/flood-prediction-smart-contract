@@ -15,7 +15,7 @@ export declare namespace IWASDIOracle {
   export interface MockWASDIOracleInterface extends Interface {
     getFunction(nameOrSignature: "DATA_FRESHNESS_THRESHOLD" | "acceptOwnership" | "addSubmitter" | "authorizedSubmitters" | "getDataFreshnessThreshold" | "getLatestData" | "getRiskScore" | "isDataFresh" | "latestDataMap" | "owner" | "pendingOwner" | "removeSubmitter" | "renounceOwnership" | "simulateCustom" | "simulateHighRisk" | "simulateLowRisk" | "submitSatelliteData" | "transferOwnership"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "DataExpired" | "HighRiskDetected" | "OwnershipTransferStarted" | "OwnershipTransferred" | "SatelliteDataSubmitted"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "HighRiskDetected" | "OwnershipTransferStarted" | "OwnershipTransferred" | "SatelliteDataSubmitted"): EventFragment;
 
     encodeFunctionData(functionFragment: 'DATA_FRESHNESS_THRESHOLD', values?: undefined): string;
 encodeFunctionData(functionFragment: 'acceptOwnership', values?: undefined): string;
@@ -57,18 +57,6 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
   }
 
   
-    export namespace DataExpiredEvent {
-      export type InputTuple = [region: string, lastUpdate: BigNumberish];
-      export type OutputTuple = [region: string, lastUpdate: bigint];
-      export interface OutputObject {region: string, lastUpdate: bigint };
-      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
-      export type Filter = TypedDeferredTopicFilter<Event>
-      export type Log = TypedEventLog<Event>
-      export type LogDescription = TypedLogDescription<Event>
-    }
-
-  
-
     export namespace HighRiskDetectedEvent {
       export type InputTuple = [region: string, riskScore: BigNumberish, timestamp: BigNumberish];
       export type OutputTuple = [region: string, riskScore: bigint, timestamp: bigint];
@@ -388,18 +376,13 @@ getFunction(nameOrSignature: 'transferOwnership'): TypedContractMethod<
       'nonpayable'
     >;
 
-    getEvent(key: 'DataExpired'): TypedContractEvent<DataExpiredEvent.InputTuple, DataExpiredEvent.OutputTuple, DataExpiredEvent.OutputObject>;
-getEvent(key: 'HighRiskDetected'): TypedContractEvent<HighRiskDetectedEvent.InputTuple, HighRiskDetectedEvent.OutputTuple, HighRiskDetectedEvent.OutputObject>;
+    getEvent(key: 'HighRiskDetected'): TypedContractEvent<HighRiskDetectedEvent.InputTuple, HighRiskDetectedEvent.OutputTuple, HighRiskDetectedEvent.OutputObject>;
 getEvent(key: 'OwnershipTransferStarted'): TypedContractEvent<OwnershipTransferStartedEvent.InputTuple, OwnershipTransferStartedEvent.OutputTuple, OwnershipTransferStartedEvent.OutputObject>;
 getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
 getEvent(key: 'SatelliteDataSubmitted'): TypedContractEvent<SatelliteDataSubmittedEvent.InputTuple, SatelliteDataSubmittedEvent.OutputTuple, SatelliteDataSubmittedEvent.OutputObject>;
 
     filters: {
       
-      'DataExpired(string,uint256)': TypedContractEvent<DataExpiredEvent.InputTuple, DataExpiredEvent.OutputTuple, DataExpiredEvent.OutputObject>;
-      DataExpired: TypedContractEvent<DataExpiredEvent.InputTuple, DataExpiredEvent.OutputTuple, DataExpiredEvent.OutputObject>;
-    
-
       'HighRiskDetected(string,uint256,uint256)': TypedContractEvent<HighRiskDetectedEvent.InputTuple, HighRiskDetectedEvent.OutputTuple, HighRiskDetectedEvent.OutputObject>;
       HighRiskDetected: TypedContractEvent<HighRiskDetectedEvent.InputTuple, HighRiskDetectedEvent.OutputTuple, HighRiskDetectedEvent.OutputObject>;
     
