@@ -31,6 +31,9 @@ describe("Batch Beneficiaries — Scale Tests", function () {
     let kyc, kycAddress;
 
     const OPERATOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("OPERATOR_ROLE"));
+    const TOTAL_BENEFICIARIES = 1000;
+    const BATCH_SIZE = 50;
+    const AMOUNT = 5000;
 
     // Generate N beneficiaries with proper Merkle leaf format:
     // leaf = keccak256(abi.encode(bytes32 hash, uint256 amount))
@@ -274,6 +277,130 @@ describe("Batch Beneficiaries — Scale Tests", function () {
             expect(totalPaid).to.equal(200);
             const stats = await floodPrediction.getSystemStats();
             expect(stats[1]).to.be.gte(200);
+        });
+    });
+
+    // =====================================================================
+    //   A8-14 fix: the full run this file was named after but never did.
+    //
+    //   Every trigger here used to be created with beneficiaryCount = 50, so an
+    //   event completed after a single batch. The 1000 existed only as a Merkle
+    //   tree, and the most it ever paid was 200 across four regions. That left the
+    //   multi-batch accumulation path untested at every scale in this family: no
+    //   test anywhere drove triggerPaidCount from 0 to beneficiaryCount across
+    //   twenty batches, watched the trigger flip to PAID, or checked that the
+    //   leftover committed budget is released when it does (the A31 path).
+    // =====================================================================
+    describe(`Batch Payment — ${TOTAL_BENEFICIARIES} Beneficiaries in ${TOTAL_BENEFICIARIES / BATCH_SIZE} Batches of ${BATCH_SIZE}`, function () {
+        let eventId;
+
+        beforeEach(async function () {
+            this.timeout(60000);
+            await floodPrediction.connect(operator).createFloodTrigger(
+                "SN-TH", 85, merkleRoot, AMOUNT * TOTAL_BENEFICIARIES, TOTAL_BENEFICIARIES
+            );
+            const ids = await floodPrediction.getTriggerIds();
+            eventId = ids[ids.length - 1];
+            await floodPrediction.connect(operator).validateTrigger(eventId);
+        });
+
+        function batchArgs(batch) {
+            const hashes = [], amounts = [], proofs = [], phoneNumbers = [];
+            for (let i = 0; i < BATCH_SIZE; i++) {
+                const idx = batch * BATCH_SIZE + i;
+                hashes.push(beneficiaries[idx].hash);
+                amounts.push(beneficiaries[idx].amount);
+                proofs.push(tree.getProof(leaves[idx]).map(p => "0x" + p.data.toString("hex")));
+                phoneNumbers.push(ethers.keccak256(ethers.toUtf8Bytes(`+22177${String(idx).padStart(7, "0")}`)));
+            }
+            return [eventId, hashes, amounts, proofs, phoneNumbers, hashes.map(() => 0)];
+        }
+
+        it(`should process all ${TOTAL_BENEFICIARIES} beneficiaries in ${TOTAL_BENEFICIARIES / BATCH_SIZE} sequential batches`, async function () {
+            this.timeout(180000);
+            const totalBatches = TOTAL_BENEFICIARIES / BATCH_SIZE;
+
+            for (let batch = 0; batch < totalBatches; batch++) {
+                await floodPrediction.connect(operator).processBatchPayment(...batchArgs(batch));
+                // The count must advance by exactly one batch each time.
+                expect(await floodPrediction.triggerPaidCount(eventId))
+                    .to.equal(BigInt((batch + 1) * BATCH_SIZE));
+            }
+
+            const sampleIndices = [0, 49, 50, 500, 950, 999];
+            for (const idx of sampleIndices) {
+                expect(await floodPrediction.isBeneficiaryPaid(eventId, beneficiaries[idx].hash)).to.be.true;
+            }
+            expect(await floodPrediction.triggerPaidCount(eventId)).to.equal(BigInt(TOTAL_BENEFICIARIES));
+        });
+
+        it("should mark the trigger PAID once the last batch completes", async function () {
+            this.timeout(180000);
+            const totalBatches = TOTAL_BENEFICIARIES / BATCH_SIZE;
+
+            for (let batch = 0; batch < totalBatches - 1; batch++) {
+                await floodPrediction.connect(operator).processBatchPayment(...batchArgs(batch));
+            }
+            // 950 of 1000 paid: still VALIDATED, not PAID.
+            expect((await floodPrediction.getFloodTrigger(eventId)).status).to.equal(3);
+
+            await floodPrediction.connect(operator).processBatchPayment(...batchArgs(totalBatches - 1));
+            expect((await floodPrediction.getFloodTrigger(eventId)).status).to.equal(4); // PAID
+            expect((await floodPrediction.getFloodTrigger(eventId)).paidAt).to.be.greaterThan(0n);
+        });
+
+        it("should release the committed budget when the event completes", async function () {
+            this.timeout(180000);
+            const declared = BigInt(AMOUNT * TOTAL_BENEFICIARIES);
+            expect(await floodPrediction.committedBudget("SN-TH")).to.equal(declared);
+
+            for (let batch = 0; batch < TOTAL_BENEFICIARIES / BATCH_SIZE; batch++) {
+                await floodPrediction.connect(operator).processBatchPayment(...batchArgs(batch));
+            }
+
+            // Spend matches the declaration exactly, so nothing is left reserved.
+            expect(await floodPrediction.triggerSpentAmount(eventId)).to.equal(declared);
+            expect(await floodPrediction.committedBudget("SN-TH")).to.equal(0n);
+        });
+
+        it(`should create one Mobile Money order per beneficiary across all batches`, async function () {
+            this.timeout(180000);
+            for (let batch = 0; batch < TOTAL_BENEFICIARIES / BATCH_SIZE; batch++) {
+                await floodPrediction.connect(operator).processBatchPayment(...batchArgs(batch));
+            }
+            // No dispatch silently lost: the payment rail holds exactly as many orders
+            // as the ledger holds payments (A8-01).
+            expect(await mobileMoney.totalPaymentsInitiated()).to.equal(BigInt(TOTAL_BENEFICIARIES));
+            expect(await mobileMoney.getPendingPaymentCount()).to.equal(BigInt(TOTAL_BENEFICIARIES));
+        });
+
+        it(`should measure gas usage per batch across all ${TOTAL_BENEFICIARIES / BATCH_SIZE} batches`, async function () {
+            this.timeout(180000);
+            const gasUsages = [];
+            const totalBatches = TOTAL_BENEFICIARIES / BATCH_SIZE;
+
+            for (let batch = 0; batch < totalBatches; batch++) {
+                const tx = await floodPrediction.connect(operator).processBatchPayment(...batchArgs(batch));
+                gasUsages.push((await tx.wait()).gasUsed);
+            }
+
+            const total = gasUsages.reduce((a, b) => a + b, 0n);
+            const max = gasUsages.reduce((a, b) => (b > a ? b : a), 0n);
+            const min = gasUsages.reduce((a, b) => (b < a ? b : a), gasUsages[0]);
+            const blockGasLimit = 30_000_000n;
+
+            console.log(`\n    📊 Gas Analysis — ${TOTAL_BENEFICIARIES} Beneficiaries (${totalBatches} batches of ${BATCH_SIZE}):`);
+            console.log(`       Average gas/batch:   ${(total / BigInt(totalBatches)).toLocaleString()}`);
+            console.log(`       Min gas/batch:       ${min.toLocaleString()}`);
+            console.log(`       Max gas/batch:       ${max.toLocaleString()}`);
+            console.log(`       Total gas:           ${total.toLocaleString()}`);
+            console.log(`       Avg gas/beneficiary: ${(total / BigInt(TOTAL_BENEFICIARIES)).toLocaleString()}`);
+            console.log(`       Peak block usage:    ${(max * 100n / blockGasLimit)}% of a 30M Polygon block`);
+            console.log(`       Coût @ 50 gwei:      ${Number(total) * 50e-9} POL\n`);
+
+            // ARCH-04: a batch must fit in a real Polygon block, not the doubled ceiling
+            // the test environment used to assume.
+            expect(max).to.be.lessThan(blockGasLimit);
         });
     });
 
