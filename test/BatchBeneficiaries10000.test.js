@@ -25,6 +25,10 @@ describe("Batch Beneficiaries — 10000 Scale Tests", function () {
     let floodPrediction, multiOracle, jokalante, mobileMoney, opalGov;
     let admin, operator, upgrader, pauser;
     let beneficiaries, leaves, tree, merkleRoot;
+    // A8-13 fix: this file already measured the ARCH-01 ledger binding (R7-02) but still
+    // passed address(0) for KYC, so batchCheckCompliance() never ran. Half the production
+    // wiring was measured and half was not; together the two add roughly 16 % to a batch.
+    let kyc;
     let eventId; // single trigger for all 10000 beneficiaries
 
     const OPERATOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("OPERATOR_ROLE"));
@@ -96,6 +100,10 @@ describe("Batch Beneficiaries — 10000 Scale Tests", function () {
         opalGov = await ozUpgrades.deployProxy(OpalGov, [admin.address, 2], { kind: "uups" });
         await opalGov.waitForDeployment();
 
+        const KYC = await ethers.getContractFactory("KYCAMLCompliance");
+        kyc = await KYC.deploy();
+        await kyc.waitForDeployment();
+
         const FloodPred = await ethers.getContractFactory("FloodPredictionContract");
         floodPrediction = await ozUpgrades.deployProxy(FloodPred, [admin.address, operator.address, upgrader.address, pauser.address], { kind: "uups" });
         await floodPrediction.waitForDeployment();
@@ -105,7 +113,7 @@ describe("Batch Beneficiaries — 10000 Scale Tests", function () {
             await opalGov.getAddress(),
             await jokalante.getAddress(),
             await mobileMoney.getAddress(),
-            ethers.ZeroAddress
+            await kyc.getAddress()   // A8-13 fix: compliance runs on every batch
         );
 
         await floodPrediction.grantRole(OPERATOR_ROLE, operator.address);
@@ -115,6 +123,7 @@ describe("Batch Beneficiaries — 10000 Scale Tests", function () {
         // ARCH-01 coûte ~5 900 gas par bénéficiaire, et l'assertion de 24M doit la
         // comptabiliser sous peine de garantir la mauvaise chose.
         await mobileMoney.setFloodPredictionContract(await floodPrediction.getAddress());
+        await kyc.authorizeContract(await floodPrediction.getAddress());
         console.log("  ✅ All contracts deployed and configured\n");
 
         // ── Generate 10000 beneficiaries ────────────────────────────────
@@ -130,6 +139,26 @@ describe("Batch Beneficiaries — 10000 Scale Tests", function () {
         console.log(`     Merkle root: ${merkleRoot}`);
         console.log(`     Tree depth:  ${tree.getDepth()}`);
         console.log(`     Leaf count:  ${tree.getLeafCount()}\n`);
+
+        // A8-13 fix: put every beneficiary through the real KYC pipeline. Two officers are
+        // required because approveAttestation enforces the four-eyes rule (H-04): the
+        // approver must differ from the submitter.
+        console.log(`  [2b/3] Approving ${TOTAL_BENEFICIARIES} KYC attestations...`);
+        const kycStart = Date.now();
+        const signers = await ethers.getSigners();
+        const [officerA, officerB] = [signers[4], signers[5]];
+        await kyc.addComplianceOfficer(officerA.address);
+        await kyc.addComplianceOfficer(officerB.address);
+        for (const b of beneficiaries) {
+            await kyc.connect(officerA).submitAttestation(
+                b.hash,
+                ethers.keccak256(ethers.toUtf8Bytes("identity" + b.hash)),
+                ethers.keccak256(ethers.toUtf8Bytes("documents")),
+                INTERNAL_REGION
+            );
+            await kyc.connect(officerB).approveAttestation(b.hash, 0, 0);
+        }
+        console.log(`  ✅ ${TOTAL_BENEFICIARIES} attestations approved in ${((Date.now() - kycStart) / 1000).toFixed(2)}s\n`);
 
         // Activate region in JokalanteTargeting
         await jokalante.updateMerkleRoot(INTERNAL_REGION, merkleRoot, TOTAL_BENEFICIARIES);

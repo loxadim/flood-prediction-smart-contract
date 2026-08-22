@@ -22,6 +22,13 @@ describe("Batch Beneficiaries — 3000 Scale Tests", function () {
     let floodPrediction, multiOracle, jokalante, mobileMoney, opalGov;
     let admin, operator, upgrader, pauser;
     let beneficiaries, leaves, tree, merkleRoot;
+    // A8-13 fix: KYC compliance and the ARCH-01 ledger binding were both absent, so every
+    // gas figure this file produced described a configuration nobody deploys.
+    // batchCheckCompliance() and the per-item getPaymentRecord() callback together add
+    // roughly 16 % to the cost of a batch. The registry is deployed once and reused: the
+    // beneficiary hashes are deterministic, so attestations approved here survive each
+    // redeployment of the hub, and per-test isolation is untouched.
+    let kyc, kycAddress;
 
     const OPERATOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("OPERATOR_ROLE"));
     const TOTAL_BENEFICIARIES = 3000;
@@ -65,6 +72,33 @@ describe("Batch Beneficiaries — 3000 Scale Tests", function () {
         console.log("  ╚══════════════════════════════════════════════════╝");
     });
 
+    // A8-13 fix: one KYC deployment, one approval pass, reused by every test below.
+    before(async function () {
+        this.timeout(600000);
+        const signers = await ethers.getSigners();
+        const [officerA, officerB] = [signers[4], signers[5]];
+
+        const KYC = await ethers.getContractFactory("KYCAMLCompliance");
+        kyc = await KYC.deploy();
+        await kyc.waitForDeployment();
+        kycAddress = await kyc.getAddress();
+
+        // Two officers: approveAttestation enforces the four-eyes rule, so the approver
+        // must differ from the submitter (H-04).
+        await kyc.addComplianceOfficer(officerA.address);
+        await kyc.addComplianceOfficer(officerB.address);
+
+        for (const b of generateBeneficiaries(3000)) {
+            await kyc.connect(officerA).submitAttestation(
+                b.hash,
+                ethers.keccak256(ethers.toUtf8Bytes("identity" + b.hash)),
+                ethers.keccak256(ethers.toUtf8Bytes("documents")),
+                "SN-TH"
+            );
+            await kyc.connect(officerB).approveAttestation(b.hash, 0, 0);
+        }
+    });
+
     beforeEach(async function () {
         this.timeout(60000);
         [admin, operator, upgrader, pauser] = await ethers.getSigners();
@@ -95,12 +129,17 @@ describe("Batch Beneficiaries — 3000 Scale Tests", function () {
             await opalGov.getAddress(),
             await jokalante.getAddress(),
             await mobileMoney.getAddress(),
-            ethers.ZeroAddress
+            kycAddress   // A8-13 fix: batchCheckCompliance() now runs on every batch
         );
 
         await floodPrediction.grantRole(OPERATOR_ROLE, operator.address);
         await floodPrediction.allocateBudget("SN-TH", 100_000_000n);
         await mobileMoney.addRelayer(await floodPrediction.getAddress());
+        // A8-13 fix: bind the payment rail to the ledger (ARCH-01), so each item costs the
+        // extra getPaymentRecord() callback the deployment scripts always incur.
+        await mobileMoney.setFloodPredictionContract(await floodPrediction.getAddress());
+        await mobileMoney.setDailyLimit("SN-TH", 100_000_000n);
+        await kyc.authorizeContract(await floodPrediction.getAddress());
         console.log("  ✅ All contracts deployed and configured");
 
         console.log("\n  [2/3] Generating 3000 beneficiaries & Merkle tree...");
