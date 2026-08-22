@@ -20,7 +20,7 @@ export declare namespace IKYCAMLCompliance {
   export interface KYCAMLComplianceInterface extends Interface {
     getFunction(nameOrSignature: "acceptOwnership" | "addComplianceOfficer" | "approveAttestation" | "approvedCount" | "attestations" | "authorizeContract" | "authorizedContracts" | "batchCheckCompliance" | "complianceOfficers" | "deauthorizeContract" | "defaultValidityPeriod" | "fraudAlertCount" | "fraudThreshold" | "getAttestation" | "getComplianceStats" | "getScreeningResult" | "isCompliant" | "isExpired" | "maxValidityPeriod" | "officerCount" | "owner" | "pendingOwner" | "raiseFraudAlert" | "recordScreening" | "reinstateBeneficiary" | "rejectAttestation" | "rejectedCount" | "removeComplianceOfficer" | "renounceOwnership" | "screenings" | "statusBeforeSuspension" | "submitAttestation" | "suspendBeneficiary" | "suspendedCount" | "totalAttestations" | "transferOwnership" | "updateDefaultValidity" | "updateFraudThreshold"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "AttestationApproved" | "AttestationExpired" | "AttestationRejected" | "AttestationSubmitted" | "BeneficiaryReinstated" | "BeneficiarySuspended" | "DefaultValidityUpdated" | "FraudAlertRaised" | "FraudThresholdUpdated" | "OwnershipTransferStarted" | "OwnershipTransferred" | "ScreeningRecorded"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "AttestationApproved" | "AttestationRejected" | "AttestationSubmitted" | "BeneficiaryReinstated" | "BeneficiarySuspended" | "DefaultValidityUpdated" | "FraudAlertRaised" | "FraudThresholdUpdated" | "OwnershipTransferStarted" | "OwnershipTransferred" | "ScreeningRecorded"): EventFragment;
 
     encodeFunctionData(functionFragment: 'acceptOwnership', values?: undefined): string;
 encodeFunctionData(functionFragment: 'addComplianceOfficer', values: [AddressLike]): string;
@@ -106,18 +106,6 @@ decodeFunctionResult(functionFragment: 'updateFraudThreshold', data: BytesLike):
       export type InputTuple = [beneficiaryHash: BytesLike, riskLevel: BigNumberish, expiresAt: BigNumberish];
       export type OutputTuple = [beneficiaryHash: string, riskLevel: bigint, expiresAt: bigint];
       export interface OutputObject {beneficiaryHash: string, riskLevel: bigint, expiresAt: bigint };
-      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
-      export type Filter = TypedDeferredTopicFilter<Event>
-      export type Log = TypedEventLog<Event>
-      export type LogDescription = TypedLogDescription<Event>
-    }
-
-  
-
-    export namespace AttestationExpiredEvent {
-      export type InputTuple = [beneficiaryHash: BytesLike];
-      export type OutputTuple = [beneficiaryHash: string];
-      export interface OutputObject {beneficiaryHash: string };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -778,7 +766,6 @@ getFunction(nameOrSignature: 'updateFraudThreshold'): TypedContractMethod<
     >;
 
     getEvent(key: 'AttestationApproved'): TypedContractEvent<AttestationApprovedEvent.InputTuple, AttestationApprovedEvent.OutputTuple, AttestationApprovedEvent.OutputObject>;
-getEvent(key: 'AttestationExpired'): TypedContractEvent<AttestationExpiredEvent.InputTuple, AttestationExpiredEvent.OutputTuple, AttestationExpiredEvent.OutputObject>;
 getEvent(key: 'AttestationRejected'): TypedContractEvent<AttestationRejectedEvent.InputTuple, AttestationRejectedEvent.OutputTuple, AttestationRejectedEvent.OutputObject>;
 getEvent(key: 'AttestationSubmitted'): TypedContractEvent<AttestationSubmittedEvent.InputTuple, AttestationSubmittedEvent.OutputTuple, AttestationSubmittedEvent.OutputObject>;
 getEvent(key: 'BeneficiaryReinstated'): TypedContractEvent<BeneficiaryReinstatedEvent.InputTuple, BeneficiaryReinstatedEvent.OutputTuple, BeneficiaryReinstatedEvent.OutputObject>;
@@ -794,10 +781,6 @@ getEvent(key: 'ScreeningRecorded'): TypedContractEvent<ScreeningRecordedEvent.In
       
       'AttestationApproved(bytes32,uint8,uint256)': TypedContractEvent<AttestationApprovedEvent.InputTuple, AttestationApprovedEvent.OutputTuple, AttestationApprovedEvent.OutputObject>;
       AttestationApproved: TypedContractEvent<AttestationApprovedEvent.InputTuple, AttestationApprovedEvent.OutputTuple, AttestationApprovedEvent.OutputObject>;
-    
-
-      'AttestationExpired(bytes32)': TypedContractEvent<AttestationExpiredEvent.InputTuple, AttestationExpiredEvent.OutputTuple, AttestationExpiredEvent.OutputObject>;
-      AttestationExpired: TypedContractEvent<AttestationExpiredEvent.InputTuple, AttestationExpiredEvent.OutputTuple, AttestationExpiredEvent.OutputObject>;
     
 
       'AttestationRejected(bytes32,string)': TypedContractEvent<AttestationRejectedEvent.InputTuple, AttestationRejectedEvent.OutputTuple, AttestationRejectedEvent.OutputObject>;

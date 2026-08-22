@@ -15,7 +15,7 @@ export declare namespace IWASDIOracle {
   export interface WASDIOracleConnectorInterface extends Interface {
     getFunction(nameOrSignature: "ANOMALY_THRESHOLD" | "MAX_FRESHNESS" | "MAX_HISTORY_ENTRIES" | "MAX_RAINFALL" | "MAX_RISK_SCORE" | "MAX_SOIL_MOISTURE" | "MAX_WATER_LEVEL" | "MIN_FRESHNESS" | "acceptOwnership" | "addRelayer" | "addSatelliteSource" | "authorizedRelayers" | "getAverageRisk" | "getDataFreshnessThreshold" | "getHistoricalData" | "getLatestData" | "getRiskScore" | "hasRecentAnomaly" | "isDataFresh" | "lastAnomalyTimestamp" | "lockProductionMode" | "owner" | "pause" | "paused" | "pendingOwner" | "productionLocked" | "regionSubmissions" | "relayerCount" | "removeRelayer" | "removeSatelliteSource" | "renounceOwnership" | "riskAlertThreshold" | "setFreshnessThreshold" | "setRiskAlertThreshold" | "setTestMode" | "simulateHighRisk" | "simulateLowRisk" | "submitSatelliteData" | "supportedSources" | "testMode" | "totalSubmissions" | "transferOwnership" | "unpause"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "AnomalyDetected" | "DataExpired" | "FreshnessThresholdUpdated" | "HighRiskDetected" | "OwnershipTransferStarted" | "OwnershipTransferred" | "Paused" | "ProductionModeLocked" | "RelayerAdded" | "RelayerRemoved" | "SatelliteDataSubmitted" | "SatelliteSourceAdded" | "SatelliteSourceRemoved" | "TestModeChanged" | "Unpaused"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "AnomalyDetected" | "FreshnessThresholdUpdated" | "HighRiskDetected" | "OwnershipTransferStarted" | "OwnershipTransferred" | "Paused" | "ProductionModeLocked" | "RelayerAdded" | "RelayerRemoved" | "SatelliteDataSubmitted" | "SatelliteSourceAdded" | "SatelliteSourceRemoved" | "TestModeChanged" | "Unpaused"): EventFragment;
 
     encodeFunctionData(functionFragment: 'ANOMALY_THRESHOLD', values?: undefined): string;
 encodeFunctionData(functionFragment: 'MAX_FRESHNESS', values?: undefined): string;
@@ -111,18 +111,6 @@ decodeFunctionResult(functionFragment: 'unpause', data: BytesLike): Result;
       export type InputTuple = [region: string, previousRisk: BigNumberish, newRisk: BigNumberish, timestamp: BigNumberish];
       export type OutputTuple = [region: string, previousRisk: bigint, newRisk: bigint, timestamp: bigint];
       export interface OutputObject {region: string, previousRisk: bigint, newRisk: bigint, timestamp: bigint };
-      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
-      export type Filter = TypedDeferredTopicFilter<Event>
-      export type Log = TypedEventLog<Event>
-      export type LogDescription = TypedLogDescription<Event>
-    }
-
-  
-
-    export namespace DataExpiredEvent {
-      export type InputTuple = [region: string, lastUpdate: BigNumberish];
-      export type OutputTuple = [region: string, lastUpdate: bigint];
-      export interface OutputObject {region: string, lastUpdate: bigint };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -884,7 +872,6 @@ getFunction(nameOrSignature: 'unpause'): TypedContractMethod<
     >;
 
     getEvent(key: 'AnomalyDetected'): TypedContractEvent<AnomalyDetectedEvent.InputTuple, AnomalyDetectedEvent.OutputTuple, AnomalyDetectedEvent.OutputObject>;
-getEvent(key: 'DataExpired'): TypedContractEvent<DataExpiredEvent.InputTuple, DataExpiredEvent.OutputTuple, DataExpiredEvent.OutputObject>;
 getEvent(key: 'FreshnessThresholdUpdated'): TypedContractEvent<FreshnessThresholdUpdatedEvent.InputTuple, FreshnessThresholdUpdatedEvent.OutputTuple, FreshnessThresholdUpdatedEvent.OutputObject>;
 getEvent(key: 'HighRiskDetected'): TypedContractEvent<HighRiskDetectedEvent.InputTuple, HighRiskDetectedEvent.OutputTuple, HighRiskDetectedEvent.OutputObject>;
 getEvent(key: 'OwnershipTransferStarted'): TypedContractEvent<OwnershipTransferStartedEvent.InputTuple, OwnershipTransferStartedEvent.OutputTuple, OwnershipTransferStartedEvent.OutputObject>;
@@ -903,10 +890,6 @@ getEvent(key: 'Unpaused'): TypedContractEvent<UnpausedEvent.InputTuple, Unpaused
       
       'AnomalyDetected(string,uint256,uint256,uint256)': TypedContractEvent<AnomalyDetectedEvent.InputTuple, AnomalyDetectedEvent.OutputTuple, AnomalyDetectedEvent.OutputObject>;
       AnomalyDetected: TypedContractEvent<AnomalyDetectedEvent.InputTuple, AnomalyDetectedEvent.OutputTuple, AnomalyDetectedEvent.OutputObject>;
-    
-
-      'DataExpired(string,uint256)': TypedContractEvent<DataExpiredEvent.InputTuple, DataExpiredEvent.OutputTuple, DataExpiredEvent.OutputObject>;
-      DataExpired: TypedContractEvent<DataExpiredEvent.InputTuple, DataExpiredEvent.OutputTuple, DataExpiredEvent.OutputObject>;
     
 
       'FreshnessThresholdUpdated(uint256,uint256)': TypedContractEvent<FreshnessThresholdUpdatedEvent.InputTuple, FreshnessThresholdUpdatedEvent.OutputTuple, FreshnessThresholdUpdatedEvent.OutputObject>;

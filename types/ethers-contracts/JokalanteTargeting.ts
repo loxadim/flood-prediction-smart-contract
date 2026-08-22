@@ -13,9 +13,9 @@ export declare namespace IJokalanteTargeting {
     }
 
   export interface JokalanteTargetingInterface extends Interface {
-    getFunction(nameOrSignature: "MAX_BATCH_SIZE" | "acceptOwnership" | "activeRegionCount" | "addAuthorizedCaller" | "authorizedCallers" | "deactivateRegion" | "defaultExpiryDuration" | "getActiveRegionCount" | "getActiveRegions" | "getBeneficiaryCount" | "getMerkleRoot" | "getTargetingCriteria" | "isAlreadyVerified" | "isRegionActive" | "markVerified" | "maxBeneficiariesPerRegion" | "owner" | "pendingOwner" | "removeAuthorizedCaller" | "renounceOwnership" | "totalRegions" | "totalVerifications" | "transferOwnership" | "updateDefaultExpiry" | "updateMaxBeneficiaries" | "updateMerkleRoot" | "verifyBeneficiary" | "verifyBeneficiaryBatch"): FunctionFragment;
+    getFunction(nameOrSignature: "MAX_BATCH_SIZE" | "acceptOwnership" | "activeRegionCount" | "addAuthorizedCaller" | "authorizedCallers" | "deactivateRegion" | "defaultExpiryDuration" | "extendRegionExpiry" | "getActiveRegionCount" | "getActiveRegions" | "getBeneficiaryCount" | "getMerkleRoot" | "getTargetingCriteria" | "isAlreadyVerified" | "isRegionActive" | "markVerified" | "maxBeneficiariesPerRegion" | "owner" | "pendingOwner" | "removeAuthorizedCaller" | "renounceOwnership" | "totalRegions" | "totalVerifications" | "transferOwnership" | "updateDefaultExpiry" | "updateMaxBeneficiaries" | "updateMerkleRoot" | "verifyBeneficiary" | "verifyBeneficiaryBatch"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "BeneficiaryVerified" | "DefaultExpiryUpdated" | "MaxBeneficiariesUpdated" | "MerkleRootUpdated" | "OwnershipTransferStarted" | "OwnershipTransferred" | "RegionDeactivated"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "BeneficiaryVerified" | "DefaultExpiryUpdated" | "MaxBeneficiariesUpdated" | "MerkleRootUpdated" | "OwnershipTransferStarted" | "OwnershipTransferred" | "RegionDeactivated" | "RegionExpiryExtended"): EventFragment;
 
     encodeFunctionData(functionFragment: 'MAX_BATCH_SIZE', values?: undefined): string;
 encodeFunctionData(functionFragment: 'acceptOwnership', values?: undefined): string;
@@ -24,6 +24,7 @@ encodeFunctionData(functionFragment: 'addAuthorizedCaller', values: [AddressLike
 encodeFunctionData(functionFragment: 'authorizedCallers', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'deactivateRegion', values: [string]): string;
 encodeFunctionData(functionFragment: 'defaultExpiryDuration', values?: undefined): string;
+encodeFunctionData(functionFragment: 'extendRegionExpiry', values: [string, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getActiveRegionCount', values?: undefined): string;
 encodeFunctionData(functionFragment: 'getActiveRegions', values: [BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getBeneficiaryCount', values: [string]): string;
@@ -53,6 +54,7 @@ decodeFunctionResult(functionFragment: 'addAuthorizedCaller', data: BytesLike): 
 decodeFunctionResult(functionFragment: 'authorizedCallers', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'deactivateRegion', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'defaultExpiryDuration', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'extendRegionExpiry', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getActiveRegionCount', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getActiveRegions', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getBeneficiaryCount', data: BytesLike): Result;
@@ -161,6 +163,18 @@ decodeFunctionResult(functionFragment: 'verifyBeneficiaryBatch', data: BytesLike
 
   
 
+    export namespace RegionExpiryExtendedEvent {
+      export type InputTuple = [region: string, newExpiresAt: BigNumberish];
+      export type OutputTuple = [region: string, newExpiresAt: bigint];
+      export interface OutputObject {region: string, newExpiresAt: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
   export interface JokalanteTargeting extends BaseContract {
     
     connect(runner?: ContractRunner | null): JokalanteTargeting;
@@ -247,6 +261,14 @@ decodeFunctionResult(functionFragment: 'verifyBeneficiaryBatch', data: BytesLike
       [],
       [bigint],
       'view'
+    >
+    
+
+    
+    extendRegionExpiry: TypedContractMethod<
+      [region: string, additionalDuration: BigNumberish, ],
+      [void],
+      'nonpayable'
     >
     
 
@@ -456,6 +478,11 @@ getFunction(nameOrSignature: 'defaultExpiryDuration'): TypedContractMethod<
       [bigint],
       'view'
     >;
+getFunction(nameOrSignature: 'extendRegionExpiry'): TypedContractMethod<
+      [region: string, additionalDuration: BigNumberish, ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'getActiveRegionCount'): TypedContractMethod<
       [],
       [bigint],
@@ -569,6 +596,7 @@ getEvent(key: 'MerkleRootUpdated'): TypedContractEvent<MerkleRootUpdatedEvent.In
 getEvent(key: 'OwnershipTransferStarted'): TypedContractEvent<OwnershipTransferStartedEvent.InputTuple, OwnershipTransferStartedEvent.OutputTuple, OwnershipTransferStartedEvent.OutputObject>;
 getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
 getEvent(key: 'RegionDeactivated'): TypedContractEvent<RegionDeactivatedEvent.InputTuple, RegionDeactivatedEvent.OutputTuple, RegionDeactivatedEvent.OutputObject>;
+getEvent(key: 'RegionExpiryExtended'): TypedContractEvent<RegionExpiryExtendedEvent.InputTuple, RegionExpiryExtendedEvent.OutputTuple, RegionExpiryExtendedEvent.OutputObject>;
 
     filters: {
       
@@ -598,6 +626,10 @@ getEvent(key: 'RegionDeactivated'): TypedContractEvent<RegionDeactivatedEvent.In
 
       'RegionDeactivated(string)': TypedContractEvent<RegionDeactivatedEvent.InputTuple, RegionDeactivatedEvent.OutputTuple, RegionDeactivatedEvent.OutputObject>;
       RegionDeactivated: TypedContractEvent<RegionDeactivatedEvent.InputTuple, RegionDeactivatedEvent.OutputTuple, RegionDeactivatedEvent.OutputObject>;
+    
+
+      'RegionExpiryExtended(string,uint256)': TypedContractEvent<RegionExpiryExtendedEvent.InputTuple, RegionExpiryExtendedEvent.OutputTuple, RegionExpiryExtendedEvent.OutputObject>;
+      RegionExpiryExtended: TypedContractEvent<RegionExpiryExtendedEvent.InputTuple, RegionExpiryExtendedEvent.OutputTuple, RegionExpiryExtendedEvent.OutputObject>;
     
     };
   }
