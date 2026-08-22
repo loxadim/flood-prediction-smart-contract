@@ -128,14 +128,25 @@ jobs:
 
       - run: npm ci
 
+      # Analyse the sources directly rather than through the Hardhat platform.
+      # crytic-compile reads a build-info file and expects the compiler output inside it
+      # under an "output" key — the Hardhat 2 layout. Hardhat 3 splits that in two,
+      # <id>.json alongside <id>.output.json, so the lookup raises KeyError: 'output'
+      # and Slither aborts before analysing anything. Pointing at contracts/ with the
+      # OpenZeppelin remapping uses the plain solc platform and sidesteps it entirely.
       - name: Run Slither
         uses: crytic/slither-action@v0.4.0
         continue-on-error: true
         id: slither
         with:
           node-version: 22
+          target: 'contracts/'
+          solc-version: 0.8.28
           fail-on: high
-          slither-args: --filter-paths "contracts/mocks|node_modules" --exclude-dependencies
+          slither-args: >-
+            --solc-remaps @openzeppelin=node_modules/@openzeppelin
+            --filter-paths "contracts/mocks|node_modules"
+            --exclude-dependencies
           sarif: results.sarif
 
       - name: Upload Slither report
@@ -146,10 +157,19 @@ jobs:
           path: results.sarif
           retention-days: 14
 
-      - name: Fail on high-severity findings
+      # Tell a crash apart from a finding. The previous version mapped every failure of
+      # the step above to "high-severity findings", so a tooling crash was reported as a
+      # security result — naming the wrong cause, which is worse than not reporting.
+      # Slither writes the SARIF only when it actually completes an analysis, so the
+      # presence of that file is the discriminator.
+      - name: Report Slither outcome
         if: steps.slither.outcome == 'failure'
         run: |
-          echo "Slither reported high-severity findings — see the slither-sarif artifact."
+          if [ -f results.sarif ]; then
+            echo "::error::Slither reported high-severity findings — see the slither-sarif artifact."
+          else
+            echo "::error::Slither could not analyse the project and produced no report. This is a tooling failure, not a security finding — check the job log above for the compilation error."
+          fi
           exit 1
 
   # ───────────────────────────────────────────────
