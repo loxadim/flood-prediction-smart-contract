@@ -232,6 +232,13 @@ contract OpalGovernanceUpgradeable is
             actors[actor].name = name;
             actors[actor].role = role;
             activeActorCount++;
+            // A49 fix: removeGovernanceActor() pops the actor out of actorList
+            // (L-06 swap-and-pop), so a reinstated actor MUST be pushed back.
+            // Without this, executeProposal()'s active-signature recount (A25 fix,
+            // which iterates actorList) silently ignores the reinstated actor's
+            // signature — and after a few key rotations actorList.length drops below
+            // quorum, making every proposal permanently unexecutable.
+            actorList.push(actor);
             emit GovernanceActorAdded(actor, name, role);
             return;
         }
@@ -463,7 +470,11 @@ contract OpalGovernanceUpgradeable is
             if (proposalRejections[proposalId][msg.sender]) revert AlreadyRejected();
             proposalRejections[proposalId][msg.sender] = true;
             proposalRejectionCount[proposalId]++;
-            if (proposalRejectionCount[proposalId] >= quorum) {
+            // A50 fix: compare against the proposal's own requiredSignatures (frozen at
+            // creation), not the live `quorum`. executeProposal() uses the frozen value,
+            // so using `quorum` here let a mid-flight updateQuorum() make rejection and
+            // execution answer to two different thresholds.
+            if (proposalRejectionCount[proposalId] >= proposal.requiredSignatures) {
                 proposal.status = ProposalStatus.REJECTED;
                 emit ProposalRejected(proposalId, msg.sender);
             }

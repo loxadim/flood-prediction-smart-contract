@@ -23,7 +23,12 @@ export default defineConfig({
       type: "edr-simulated",
       chainId: 1337,
       hardfork: "cancun",
-      blockGasLimit: 60_000_000,
+      // ARCH-04 fix: aligned on Polygon PoS's real 30M block gas limit.
+      // This was 60_000_000 — double the target chain — so MAX_BATCH_SIZE = 50 had only
+      // ever been validated against a ceiling that does not exist in production. A batch
+      // measured at ~19.7M gas already consumes two thirds of a real Polygon block; the
+      // test environment must be the one that says so first.
+      blockGasLimit: 30_000_000,
       allowUnlimitedContractSize: false,
     },
     localhost: {

@@ -7,6 +7,25 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../interfaces/IMobileMoneyProvider.sol";
 
 /**
+ * @dev ARCH-01 fix: minimal view into FloodPredictionContract's payment ledger.
+ * Declared locally rather than importing the full contract — MobileMoneyProvider only
+ * needs to read one record, and a narrow interface keeps the dependency one-directional.
+ * The tuple shape matches FloodPredictionContract.PaymentRecord exactly.
+ */
+interface IFloodPaymentLedger {
+    struct PaymentRecord {
+        bytes32 beneficiaryHash;
+        uint256 amount;
+        uint256 paidAt;
+        string eventId;
+        bool verified;
+    }
+
+    function getPaymentRecord(string calldata eventId, bytes32 beneficiaryHash)
+        external view returns (PaymentRecord memory);
+}
+
+/**
  * @title MobileMoneyProvider
  * @author DPA Foundation — OPAL Platform
  * @notice Production Mobile Money provider for Senegal
@@ -99,6 +118,19 @@ contract MobileMoneyProvider is IMobileMoneyProvider, Ownable2Step, Pausable, Re
     /// @notice Daily spend tracking: region -> day -> amount
     mapping(string => mapping(uint256 => uint256)) public regionDailySpend;
 
+    /// @notice ARCH-01 fix: FloodPredictionContract acting as the payment ledger.
+    /// While set, every payment order must correspond to a finalized PaymentRecord on
+    /// that contract — the relayer whitelist stops being a spending authority and
+    /// becomes what it was meant to be, an access control. address(0) leaves the
+    /// provider unbound (legacy behaviour, test deployments only).
+    address public floodPrediction;
+
+    /// @notice A8-02 fix: (eventId, beneficiaryHash) pairs already turned into a payment
+    /// order. The ARCH-01 ledger check proves an order is *backed*; this proves it has not
+    /// already been placed. Only consulted while bound to a ledger — an unbound deployment
+    /// has no eventId to key on.
+    mapping(bytes32 => bool) public orderPlaced;
+
     // ============================
     // Errors
     // ============================
@@ -119,6 +151,15 @@ contract MobileMoneyProvider is IMobileMoneyProvider, Ownable2Step, Pausable, Re
     error InvalidTimeout(uint256 timeout);
     error ZeroAddress();
     error CannotRemoveLastRelayer();
+    /// @notice ARCH-01 fix: no PaymentRecord backs this (eventId, beneficiary) pair,
+    /// or its amount does not match the ledger.
+    error UnbackedPayment(bytes32 beneficiaryHash);
+    /// @notice A8-02 fix: an order has already been placed for this (eventId, beneficiary).
+    error OrderAlreadyPlaced(bytes32 beneficiaryHash);
+    /// @notice ARCH-01 fix: single-payment entry point is closed once bound to a ledger —
+    /// it carries no event context, so nothing could be verified against.
+    error DirectPaymentDisabled();
+    error InvalidLedger();
 
     // ============================
     // Events (additional to interface)
@@ -127,6 +168,7 @@ contract MobileMoneyProvider is IMobileMoneyProvider, Ownable2Step, Pausable, Re
     event RelayerRemoved(address indexed relayer);
     event TimeoutUpdated(uint256 oldTimeout, uint256 newTimeout);
     event DailyLimitSet(string indexed region, uint256 limit);
+    event FloodPredictionBound(address indexed ledger);
     event PaymentSkipped(bytes32 indexed paymentId, string reason);
 
     // ============================
@@ -161,6 +203,12 @@ contract MobileMoneyProvider is IMobileMoneyProvider, Ownable2Step, Pausable, Re
         string calldata region,
         MobileProvider provider
     ) external override onlyRelayer whenNotPaused nonReentrant returns (bytes32 paymentId) {
+        // ARCH-01 fix: this entry point carries no eventId, so nothing can be verified
+        // against the ledger. Once bound, all orders must go through
+        // batchInitiatePayments. No contract, script or relayer path calls this — it is
+        // retained only for unbound (test) deployments.
+        if (floodPrediction != address(0)) revert DirectPaymentDisabled();
+
         // Validate
         _validatePaymentInputs(beneficiaryHash, amount, phoneHash, region);
         _checkDailyLimit(region, amount);
@@ -254,11 +302,24 @@ contract MobileMoneyProvider is IMobileMoneyProvider, Ownable2Step, Pausable, Re
     function retryPayment(bytes32 paymentId) external override onlyRelayer whenNotPaused nonReentrant {
         Payment storage payment = _payments[paymentId];
         if (payment.initiatedAt == 0) revert PaymentNotFound(paymentId);
-        if (payment.status != PaymentStatus.FAILED) revert PaymentNotPending(paymentId);
+        // A55 fix: EXPIRED is accepted alongside FAILED. An expiry is a delivery failure,
+        // not a legitimate terminal state, and it previously had no route back to PENDING.
+        // That mattered because FloodPredictionContract finalises the payment record and
+        // debits the budget BEFORE dispatching (H-03 decoupling), and marks
+        // mobileMoneyDispatched on a successful dispatch — so once a dispatched payment
+        // expired here, retryMobileMoneyDispatch() also refused it with
+        // PaymentAlreadyDispatched. The beneficiary was booked as paid, the budget spent,
+        // and the money never delivered, with no on-chain recovery. A relayer outage
+        // spanning paymentTimeout was enough to reach that state.
+        if (payment.status != PaymentStatus.FAILED && payment.status != PaymentStatus.EXPIRED) {
+            revert PaymentNotPending(paymentId);
+        }
         if (payment.retryCount >= MAX_RETRIES) revert MaxRetriesExceeded(paymentId);
 
-        // Re-reserve the daily allowance under today's date, since failPayment
-        // already refunded it under the original initiation date.
+        // Re-reserve the daily allowance under today's date. Both predecessor states
+        // already refunded it under the original initiation date — failPayment() for
+        // FAILED, expireStalePayments()/batchConfirmPayments() for EXPIRED — and both
+        // decremented pendingPaymentCount, so the accounting below is symmetric.
         _checkDailyLimit(payment.region, payment.amount);
 
         payment.status = PaymentStatus.PENDING;
@@ -284,12 +345,56 @@ contract MobileMoneyProvider is IMobileMoneyProvider, Ownable2Step, Pausable, Re
         uint256[] calldata amounts,
         bytes32[] calldata phoneHashes,
         string calldata region,
-        MobileProvider[] calldata providers
+        MobileProvider[] calldata providers,
+        string calldata eventId
     ) external override onlyRelayer whenNotPaused nonReentrant returns (bytes32[] memory paymentIds) {
         uint256 count = beneficiaryHashes.length;
         if (count == 0) revert EmptyBatch();
         if (count > MAX_BATCH_SIZE) revert BatchTooLarge(count);
         if (count != amounts.length || count != phoneHashes.length || count != providers.length) revert ArrayLengthMismatch();
+
+        // ARCH-01 fix: when bound to the FloodPrediction ledger, every item must be
+        // backed by a finalized PaymentRecord for this eventId, at exactly this amount.
+        //
+        // Before this check, `onlyRelayer` was the ONLY gate on creating payment orders:
+        // the whitelist doubled as an unlimited spending authority, and it necessarily
+        // contains the relayer's hot wallet — a key that must stay online signing
+        // settlements. A compromise of that key could mint arbitrary orders that the
+        // relayer would then execute against Orange Money / Wave, with none of the
+        // upstream guarantees (oracle consensus, Merkle proof, KYC, regional budget)
+        // ever consulted. Verifying against the ledger makes the whitelist an access
+        // control again rather than a spending authority.
+        //
+        // FloodPredictionContract writes paymentRecords BEFORE dispatching to this
+        // contract, so the records are always present by the time this runs.
+        //
+        // A8-02 fix: the ledger check alone proves an order is BACKED, never that it is
+        // NEW. A PaymentRecord is permanent, so the same (eventId, beneficiary, amount)
+        // could be resubmitted without limit — and because _generatePaymentId mixes in a
+        // nonce, every replay minted a fresh order with a fresh id that the relayer would
+        // then execute against Orange Money / Wave. One legitimate entitlement became any
+        // number of real disbursements, bounded only by the regional daily ceiling.
+        // FloodPredictionContract's own mobileMoneyDispatched guard does not help here:
+        // a replay bypasses the hub entirely and speaks straight to this contract.
+        // Marking the pair consumed closes that, and costs one warm SSTORE per item.
+        //
+        // Retries stay possible on both legitimate paths. A dispatch that reverts inside
+        // FloodPredictionContract's try/catch rolls this write back with the rest of the
+        // call, so retryMobileMoneyDispatch() still works; a delivery that fails at the
+        // provider recovers through retryPayment(), which reuses the existing order.
+        address ledger = floodPrediction;
+        if (ledger != address(0)) {
+            for (uint256 i = 0; i < count; i++) {
+                IFloodPaymentLedger.PaymentRecord memory record =
+                    IFloodPaymentLedger(ledger).getPaymentRecord(eventId, beneficiaryHashes[i]);
+                if (record.paidAt == 0 || record.amount != amounts[i]) {
+                    revert UnbackedPayment(beneficiaryHashes[i]);
+                }
+                bytes32 orderRef = keccak256(abi.encode(eventId, beneficiaryHashes[i]));
+                if (orderPlaced[orderRef]) revert OrderAlreadyPlaced(beneficiaryHashes[i]);
+                orderPlaced[orderRef] = true;
+            }
+        }
 
         // H8-MMP fix: reject batch if any beneficiary hash appears more than once.
         // _generatePaymentId uses nonces so duplicate hashes would produce distinct IDs,
@@ -477,6 +582,18 @@ contract MobileMoneyProvider is IMobileMoneyProvider, Ownable2Step, Pausable, Re
     /**
      * @notice Update payment timeout
      */
+    /**
+     * @notice ARCH-01 fix: bind this provider to the FloodPrediction payment ledger.
+     * @dev Once bound, batchInitiatePayments verifies every order against an on-chain
+     *      PaymentRecord and initiatePayment is closed. Pass address(0) to unbind.
+     * @param ledger FloodPredictionContract proxy address, or address(0) to unbind
+     */
+    function setFloodPredictionContract(address ledger) external onlyOwner {
+        if (ledger != address(0) && ledger.code.length == 0) revert InvalidLedger();
+        floodPrediction = ledger;
+        emit FloodPredictionBound(ledger);
+    }
+
     function setTimeout(uint256 newTimeout) external onlyOwner {
         if (newTimeout < MIN_TIMEOUT || newTimeout > MAX_TIMEOUT) revert InvalidTimeout(newTimeout);
         uint256 oldTimeout = paymentTimeout;

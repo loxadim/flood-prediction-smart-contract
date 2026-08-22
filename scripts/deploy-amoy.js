@@ -292,6 +292,14 @@ console.log(`  PAUSER_ROLE:   ${pauserAddress}`);
         await tx3.wait();
         logStep("  ✅", "Deployer relayer privileges revoked");
 
+        // CA-01 fix: ARCH-01 était appliqué à deploy-upgradeable.js uniquement — le script
+        // de PRODUCTION ne liait pas le rail de paiement au registre. Sans cette liaison,
+        // toute clé sur la liste blanche des relayers peut fabriquer des ordres de paiement
+        // sans trigger, sans preuve Merkle, sans KYC et sans budget.
+        const tx4 = await mobileMoney.setFloodPredictionContract(deployed.FloodPredictionProxy);
+        await tx4.wait();
+        logStep("  ✅", "MobileMoneyProvider lié au registre FloodPrediction (initiatePayment direct fermé)");
+
         steps.relayerConfigured = true;
         saveProgress(progress);
     } else {
@@ -325,6 +333,36 @@ console.log(`  PAUSER_ROLE:   ${pauserAddress}`);
         await tx2.wait();
         logStep("  ✅", "FloodPrediction authorized as caller on KYCAMLCompliance");
 
+        // A8-03 fix: register a second compliance officer, or the KYC pipeline is inert.
+        //
+        // KYCAMLCompliance's constructor registers the deployer as the ONLY officer, and
+        // approveAttestation() enforces the four-eyes rule (H-04 fix): the approver must
+        // differ from the submitter. With one officer that condition can never be met, so
+        // no attestation ever reaches VERIFIED, batchCheckCompliance() returns false for
+        // everyone, and FloodPredictionContract rejects every batch with KYCCheckFailed.
+        // The deployment succeeded, reported success, and could not pay a single
+        // beneficiary. The oracle count (A47) and governance actors (A76) already had
+        // this guard; compliance did not, though its failure mode is more absolute.
+        const officers = (process.env.COMPLIANCE_OFFICERS || "")
+            .split(",").map(a => a.trim()).filter(Boolean);
+        for (const [i, addr] of officers.entries()) {
+            if (!ethers.isAddress(addr)) {
+                throw new Error(`COMPLIANCE_OFFICERS[${i}]="${addr}" is not a valid address`);
+            }
+            await (await kyc.addComplianceOfficer(addr)).wait();
+            logStep("  ✅", `Compliance officer registered: ${addr}`);
+        }
+        const officerCount = await kyc.officerCount();
+        if (officerCount < 2n) {
+            throw new Error(
+                `Only ${officerCount} compliance officer(s) registered. approveAttestation() ` +
+                `requires the approver to differ from the submitter, so no KYC attestation ` +
+                `could ever be approved and NO beneficiary could ever be paid.\n` +
+                `     Set COMPLIANCE_OFFICERS to at least one address distinct from the deployer.`
+            );
+        }
+        logStep("  ✅", `Compliance: ${officerCount} officers ≥ 2 (four-eyes satisfiable)`);
+
         steps.complianceAuthorized = true;
         saveProgress(progress);
     } else {
@@ -337,7 +375,11 @@ console.log(`  PAUSER_ROLE:   ${pauserAddress}`);
         for (const region of DEPLOYMENT_CONFIG.regions) {
             const tx = await floodPred.allocateBudget(region.code, region.budget);
             await tx.wait();
-            logStep("  💰", `${region.code} (${region.name}): ${region.budget.toLocaleString()} CFA`);
+            // CA-01 fix: un plafond à 0 signifie ILLIMITÉ. Sans cet appel, le seul frein
+            // quantitatif du rail de paiement n'existe pas.
+            const txLimit = await mobileMoney.setDailyLimit(region.code, region.budget);
+            await txLimit.wait();
+            logStep("  💰", `${region.code} (${region.name}): ${region.budget.toLocaleString()} CFA (plafond journalier identique)`);
         }
         steps.budgetsConfigured = true;
         saveProgress(progress);
@@ -403,6 +445,124 @@ console.log(`  PAUSER_ROLE:   ${pauserAddress}`);
         await tx5.wait();
         logStep("  ✅", "MultiOracle governance set to OpalGovernance");
 
+        // A65 fix: grant the governance PROXY the FloodPrediction roles that the
+        // whitelisted selectors require. Without this, every proposal targeting
+        // FloodPredictionContract reverts with AccessControlUnauthorizedAccount — the
+        // whole multi-sig + quorum + timelock + selector-whitelist apparatus
+        // terminated in a call that could not pass, leaving the emergency-response
+        // path unavailable precisely when it was needed.
+        //   ADMIN_ROLE  -> createGovernanceOverrideTrigger, activateEmergencyMode,
+        //                  deactivateEmergencyMode, setRegionEmergency, updateRiskThreshold
+        //   PAUSER_ROLE -> pause, unpause
+        const fpcAdminRole = await floodPred.ADMIN_ROLE();
+        const fpcPauserRole = await floodPred.PAUSER_ROLE();
+        const tx6 = await floodPred.grantRole(fpcAdminRole, deployed.OpalGovernanceProxy);
+        await tx6.wait();
+        const tx7 = await floodPred.grantRole(fpcPauserRole, deployed.OpalGovernanceProxy);
+        await tx7.wait();
+        logStep("  ✅", "Governance granted ADMIN_ROLE + PAUSER_ROLE on FloodPrediction");
+
+        // A76 fix: register enough governance actors to make the quorum reachable.
+        // initialize() registers only the owner, so a quorum of 2+ left activeActorCount
+        // at 1 — permanently below it. The proposer auto-signs, no second active actor
+        // exists to sign, and executeProposal()'s active-signature recount can never
+        // reach requiredSignatures. Granting the roles (A65) was necessary but not
+        // sufficient: without a second actor the emergency path is still unreachable.
+        const govActors = (process.env.GOVERNANCE_ACTORS || "")
+            .split(",").map(a => a.trim()).filter(Boolean);
+        for (const [i, addr] of govActors.entries()) {
+            if (!ethers.isAddress(addr)) {
+                throw new Error(`GOVERNANCE_ACTORS[${i}]="${addr}" is not a valid address`);
+            }
+            const txa = await opalGov.addGovernanceActor(addr, `Governor-${i + 1}`, "GOVERNOR");
+            await txa.wait();
+            logStep("  ✅", `Governance actor registered: ${addr}`);
+        }
+        const activeActors = await opalGov.getActiveActorCount();
+        const govQuorum = await opalGov.getQuorum();
+        if (activeActors < govQuorum) {
+            logStep("⚠️", `Only ${activeActors} governance actor(s) for a quorum of ${govQuorum} —`);
+            logStep("⚠️", "NO proposal can ever execute (emergency AND upgrade paths inert).");
+            logStep("⚠️", "Set GOVERNANCE_ACTORS (comma-separated) before production use.");
+        } else {
+            logStep("  ✅", `Governance: ${activeActors} active actors ≥ quorum ${govQuorum}`);
+        }
+
+        // CA-01 fix: ARCH-02 + R7-01 n'existaient que dans deploy-upgradeable.js. Sur le
+        // script de PRODUCTION, les 5 contrats immuables restaient sous la clé du déployeur —
+        // 44 fonctions d'administration hors du périmètre multi-signatures, dont addRelayer
+        // sur MMP qui permet de retomber sur ARCH-01.
+        //
+        // R7-01 : whitelister les sélecteurs AVANT de transférer. Transférer sans cela gèle
+        // définitivement les fonctions — le déployeur perd le droit de les appeler et
+        // executeProposal rejette tout sélecteur non whitelisté.
+        if ((process.env.TRANSFER_SPOKES_TO_GOVERNANCE ?? "true") === "true") {
+            // CA-02 fix: transférer vers une gouvernance qui ne peut pas atteindre son
+            // quorum laisse les spokes en limbes — pendingOwner pointe sur la gouvernance,
+            // et aucune proposition acceptOwnership() ne pourra jamais s'exécuter. Mieux
+            // vaut refuser le transfert que produire un déploiement infinissable.
+            // deploy-amoy initialise un quorum de 3 (emergencyQuorum) : il faut donc au
+            // moins 2 adresses dans GOVERNANCE_ACTORS, le propriétaire comptant pour 1.
+            if (activeActors < govQuorum) {
+                throw new Error(
+                    `Transfert des spokes impossible : ${activeActors} acteur(s) de gouvernance ` +
+                    `pour un quorum de ${govQuorum}. Aucune proposition acceptOwnership() ne pourrait ` +
+                    `s'exécuter et les contrats resteraient en transfert non finalisé.\n` +
+                    `     Renseigner GOVERNANCE_ACTORS avec ${Number(govQuorum) - Number(activeActors)} ` +
+                    `adresse(s) de plus, ou poser TRANSFER_SPOKES_TO_GOVERNANCE=false pour différer.`
+                );
+            }
+            const spokeContracts = {
+                MultiOracle: multiOracle,
+                WASDIOracleConnector: wasdiOracle,
+                JokalanteTargeting: jokalante,
+                MobileMoneyProvider: mobileMoney,
+                KYCAMLCompliance: kyc,
+            };
+            const OWNER_SELECTORS = {
+                MultiOracle: ["registerOracle", "deactivateOracle", "reactivateOracle",
+                              "deregisterOracle", "setGovernance"],
+                WASDIOracleConnector: ["addRelayer", "removeRelayer", "addSatelliteSource",
+                                       "removeSatelliteSource", "setFreshnessThreshold", "setTestMode",
+                                       "lockProductionMode", "setRiskAlertThreshold"],
+                JokalanteTargeting: ["updateMerkleRoot", "extendRegionExpiry", "deactivateRegion",
+                                     "addAuthorizedCaller", "removeAuthorizedCaller",
+                                     "updateDefaultExpiry", "updateMaxBeneficiaries"],
+                MobileMoneyProvider: ["addRelayer", "removeRelayer", "setDailyLimit",
+                                      "setFloodPredictionContract", "setTimeout"],
+                KYCAMLCompliance: ["addComplianceOfficer", "removeComplianceOfficer", "authorizeContract",
+                                   "deauthorizeContract", "updateDefaultValidity", "updateFraudThreshold"],
+            };
+            const EMERGENCY_SPOKE_SELECTORS = {
+                MultiOracle: ["pause", "unpause"],
+                WASDIOracleConnector: ["pause", "unpause"],
+                MobileMoneyProvider: ["pause", "unpause"],
+            };
+
+            const sel = new Set(), emg = new Set();
+            for (const [name, c] of Object.entries(spokeContracts)) {
+                for (const fn of OWNER_SELECTORS[name] ?? []) sel.add(c.interface.getFunction(fn).selector);
+                for (const fn of EMERGENCY_SPOKE_SELECTORS[name] ?? []) emg.add(c.interface.getFunction(fn).selector);
+            }
+            sel.add(multiOracle.interface.getFunction("acceptOwnership").selector);
+
+            const selList = [...sel], emgList = [...emg];
+            await (await opalGov.setAllowedSelectorBatch(selList, selList.map(() => true))).wait();
+            await (await opalGov.setEmergencyAllowedSelectorBatch(emgList, emgList.map(() => true))).wait();
+            logStep("  ✅", `${selList.length} sélecteurs d'administration + ${emgList.length} d'urgence whitelistés`);
+
+            for (const [name, c] of Object.entries(spokeContracts)) {
+                const addr = await c.getAddress();
+                await (await opalGov.setAllowedTarget(addr, true)).wait();
+                await (await c.transferOwnership(deployed.OpalGovernanceProxy)).wait();
+                logStep("  ✅", `${name} : propriété transférée à la gouvernance (acceptation en attente)`);
+            }
+            logStep("⚠️", "Finaliser avec accept-spoke-ownership.js (une proposition par spoke).");
+            logStep("⚠️", "updateMerkleRoot passe par la gouvernance : publier les listes EN AMONT de la saison.");
+        } else {
+            logStep("⚠️", "TRANSFER_SPOKES_TO_GOVERNANCE=false — les spokes restent sous la clé du déployeur.");
+        }
+
         steps.governanceConfigured = true;
         saveProgress(progress);
         logStep("✅", "OpalGovernance configured");
@@ -443,6 +603,80 @@ console.log(`  PAUSER_ROLE:   ${pauserAddress}`);
         saveProgress(progress);
     } else {
         logStep("⏭️", "Oracles already registered — skipping");
+    }
+
+    // ----------------------------------------
+    // A8-04 fix: hand the hub itself to governance
+    // ----------------------------------------
+    // ARCH-02 moved the five immutable spokes under governance and left the contract that
+    // decides WHO IS PAID AND HOW MUCH under the deployer's EOA. Governance received
+    // ADMIN_ROLE and PAUSER_ROLE (A65) — but only as SUBORDINATE roles, revocable at will
+    // by the DEFAULT_ADMIN_ROLE the deployer kept. With that one key, without quorum,
+    // delay or proposal, one could repoint kycCompliance at a permissive contract,
+    // repoint jokalanteTargeting or multiOracle, raise oracleTolerance, lower
+    // riskThreshold, or grant any role to anyone. The multi-sig, the quorum, the execution
+    // delay and the selector whitelists all guarded the perimeter while the centre stayed
+    // one key away.
+    //
+    // verify-deployment.js made this invisible: it asserted the deployer HELD
+    // DEFAULT_ADMIN_ROLE and recorded that as correct.
+    //
+    // R7-01 applies verbatim: whitelist every admin selector BEFORE renouncing, or the
+    // functions become permanently unreachable — the deployer loses the right to call
+    // them and executeProposal rejects any selector that is not whitelisted.
+    if (!steps.hubHandover && (process.env.TRANSFER_HUB_TO_GOVERNANCE ?? "true") === "true") {
+        logSection("Hub Handover — FloodPrediction under governance");
+
+        const activeActors = await opalGov.getActiveActorCount();
+        const govQuorum = await opalGov.getQuorum();
+        if (activeActors < govQuorum) {
+            throw new Error(
+                `Hub handover impossible: ${activeActors} governance actor(s) for a quorum of ` +
+                `${govQuorum}. Renouncing the deployer's DEFAULT_ADMIN_ROLE has no undo — with ` +
+                `an unreachable quorum, EVERY administrative function of FloodPredictionContract ` +
+                `would be permanently unreachable.\n` +
+                `     Add addresses to GOVERNANCE_ACTORS, or set ` +
+                `TRANSFER_HUB_TO_GOVERNANCE=false to defer.`
+            );
+        }
+
+        // Non-emergency admin surface — subject to the 1h EXECUTION_DELAY review window.
+        const HUB_ADMIN_SELECTORS = [
+            "allocateBudget", "deactivateBudget", "setContractAddresses",
+            "updateRiskThreshold", "setOracleTolerance", "cancelTrigger",
+            "grantRole", "revokeRole",
+        ];
+        const hubSelectors = HUB_ADMIN_SELECTORS.map(
+            fn => floodPred.interface.getFunction(fn).selector);
+        await (await opalGov.setAllowedSelectorBatch(
+            hubSelectors, hubSelectors.map(() => true))).wait();
+        logStep("  ✅", `${hubSelectors.length} hub admin selectors whitelisted on governance`);
+        // Emergency selectors (pause, emergency mode, override trigger) were whitelisted
+        // in the governance configuration step above.
+
+        const fpcDefaultAdmin = ethers.ZeroHash;
+        const fpcAdminRole = await floodPred.ADMIN_ROLE();
+
+        // Grant first, renounce second — never leave the contract without an admin.
+        await (await floodPred.grantRole(fpcDefaultAdmin, deployed.OpalGovernanceProxy)).wait();
+        logStep("  ✅", "Governance granted DEFAULT_ADMIN_ROLE on FloodPrediction");
+
+        if (!(await floodPred.hasRole(fpcDefaultAdmin, deployed.OpalGovernanceProxy))) {
+            throw new Error("Governance does not hold DEFAULT_ADMIN_ROLE — aborting before renounce");
+        }
+
+        await (await floodPred.renounceRole(fpcAdminRole, deployer.address)).wait();
+        await (await floodPred.renounceRole(fpcDefaultAdmin, deployer.address)).wait();
+        logStep("  ✅", "Deployer renounced ADMIN_ROLE and DEFAULT_ADMIN_ROLE");
+        logStep("⚠️", "Budget allocation and contract rewiring now require a governance proposal");
+        logStep("⚠️", "PAUSER_ROLE stays on its own operational key for immediate containment");
+
+        steps.hubHandover = true;
+        saveProgress(progress);
+    } else if (steps.hubHandover) {
+        logStep("⏭️", "Hub already handed over to governance — skipping");
+    } else {
+        logStep("⚠️", "TRANSFER_HUB_TO_GOVERNANCE=false — FloodPrediction stays under the deployer key.");
     }
 
     // ----------------------------------------

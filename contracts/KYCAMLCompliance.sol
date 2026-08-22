@@ -72,6 +72,8 @@ contract KYCAMLCompliance is IKYCAMLCompliance, Ownable2Step {
     error NotComplianceOfficer();
     error NotAuthorizedContract();
     error InvalidBeneficiaryHash();
+    /// @notice A54 fix: raised when an attestation is submitted with a zero identityHash
+    error InvalidIdentityHash();
     error AttestationAlreadyExists();
     error AttestationNotFound();
     error AttestationNotPending();
@@ -180,7 +182,15 @@ contract KYCAMLCompliance is IKYCAMLCompliance, Ownable2Step {
         string calldata region
     ) external override onlyComplianceOfficer {
         if (beneficiaryHash == bytes32(0)) revert InvalidBeneficiaryHash();
-        
+        // A54 fix: identityHash doubles as the existence marker for approveAttestation()
+        // and rejectAttestation() (`identityHash == 0` => AttestationNotFound). Accepting a
+        // zero identityHash therefore created an attestation stuck in PENDING forever:
+        // not approvable, not rejectable, and not re-submittable (PENDING re-submission
+        // reverts with AttestationAlreadyExists). The beneficiary was permanently
+        // non-compliant and silently dropped from every payment batch, with no admin path
+        // to clear the record.
+        if (identityHash == bytes32(0)) revert InvalidIdentityHash();
+
         ComplianceAttestation storage existing = attestations[beneficiaryHash];
         // Allow re-submission (renewal) if previous was rejected, or VERIFIED but now expired.
         // A26 fix: without the expiry carve-out a VERIFIED attestation past its expiresAt could
@@ -209,6 +219,12 @@ contract KYCAMLCompliance is IKYCAMLCompliance, Ownable2Step {
             revert BeneficiaryAlreadySuspended();
         }
         
+        // A8-12 fix: count DISTINCT beneficiaries, not submissions. Renewals (an expired
+        // VERIFIED record, or a REJECTED one being resubmitted) reach this line too, so
+        // the counter drifted upward on every renewal and getComplianceStats() reported a
+        // beneficiary population larger than the register actually holds.
+        bool isFirstSubmission = existing.identityHash == bytes32(0);
+
         attestations[beneficiaryHash] = ComplianceAttestation({
             identityHash: identityHash,
             documentHash: documentHash,
@@ -220,8 +236,8 @@ contract KYCAMLCompliance is IKYCAMLCompliance, Ownable2Step {
             submittedBy: msg.sender,   // H-04 fix: record submitter for 4-eyes enforcement
             region: region
         });
-        
-        totalAttestations++;
+
+        if (isFirstSubmission) totalAttestations++;
         
         emit AttestationSubmitted(beneficiaryHash, identityHash, region);
     }

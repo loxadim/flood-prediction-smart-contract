@@ -1,7 +1,7 @@
-import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { resolvePath } from './config.js';
+import { fetchCertificateExpiry } from './crypto.js';
 
 const AUDIT_LOG_DIR = './relayer/logs';
 const MAX_LOG_SIZE = 10 * 1024 * 1024; // 10MB
@@ -41,7 +41,18 @@ export class AuditLogger {
 
   async log(event, details = {}) {
     await this._rotateLogs();
-    if (!this.logFile) return;
+    // A70 fix: this used to `return` silently when logFile was unset, so every audit
+    // entry — including the durable INCIDENT raised after a failed settlement — was
+    // discarded without a trace on any code path that skipped initialize(). A
+    // compliance log that disables itself in silence is worse than no log at all, so
+    // the entry is now surfaced on stderr and the misconfiguration is named.
+    if (!this.logFile) {
+      console.error(
+        `[audit] NOT PERSISTED (logger uninitialized — call auditLogger.initialize()): ` +
+        `${event} ${JSON.stringify(details)}`
+      );
+      return;
+    }
 
     const entry = {
       timestamp: new Date().toISOString(),
@@ -99,13 +110,43 @@ export class AuditLogger {
 export class CertificateMonitor {
   constructor() {
     this.certs = {};
+    // A8-10 fix: provider -> endpoint URL, populated when each adapter is constructed.
+    // Without this the monitor had no way to learn what to inspect.
+    this.endpoints = {};
+  }
+
+  /**
+   * Register a provider endpoint to monitor. Called by each provider adapter as it
+   * validates its configuration, so the monitor tracks exactly the hosts in use.
+   *
+   * @param {string} provider Provider name (e.g. "ORANGE_MONEY")
+   * @param {string} url HTTPS endpoint
+   */
+  registerEndpoint(provider, url) {
+    if (!provider || !url) return;
+    this.endpoints[provider] = url;
   }
 
   async checkCertificates() {
-    // Monitor TLS certificate expiration across providers
+    // Monitor TLS certificate expiration across providers.
+    // A8-10 fix: refresh expiry dates from the live endpoints before evaluating them.
+    // Previously this read a map that no code path ever wrote to.
     const warnings = [];
     const now = Date.now();
     const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+
+    for (const [provider, url] of Object.entries(this.endpoints)) {
+      const validTo = await fetchCertificateExpiry(url);
+      if (validTo) {
+        this.certs[provider] = { expiresAt: validTo };
+      } else {
+        warnings.push({
+          severity: 'WARNING',
+          provider,
+          message: 'Could not read TLS certificate — endpoint unreachable or not TLS',
+        });
+      }
+    }
 
     for (const [provider, cert] of Object.entries(this.certs)) {
       if (!cert.expiresAt) continue;

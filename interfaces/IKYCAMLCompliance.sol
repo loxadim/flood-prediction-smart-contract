@@ -108,7 +108,11 @@ interface IKYCAMLCompliance {
     event AttestationSubmitted(bytes32 indexed beneficiaryHash, bytes32 identityHash, string region);
     event AttestationApproved(bytes32 indexed beneficiaryHash, RiskLevel riskLevel, uint256 expiresAt);
     event AttestationRejected(bytes32 indexed beneficiaryHash, string reason);
-    event AttestationExpired(bytes32 indexed beneficiaryHash);
+    // A63 fix: AttestationExpired removed. Expiry is evaluated lazily on read —
+    // _isCompliant() compares against expiresAt and isExpired() exposes it — so no
+    // state transition ever occurs and there was no point at which to emit. Declaring
+    // it misled off-chain indexers into waiting for an event that never arrives, and
+    // concluding that no attestation ever expires.
     event BeneficiarySuspended(bytes32 indexed beneficiaryHash, string reason);
     event BeneficiaryReinstated(bytes32 indexed beneficiaryHash);
     event ScreeningRecorded(bytes32 indexed beneficiaryHash, bool isCleared, string provider);

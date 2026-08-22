@@ -1,9 +1,20 @@
 import fs from 'node:fs/promises';
 import { ethers } from 'ethers';
-import { getConfig, providerIndexFromName, providerNameFromIndex, resolvePath } from './config.js';
+import {
+  assertPaymentModeConfigured,
+  assertSimulationAllowed,
+  getConfig,
+  providerIndexFromName,
+  providerNameFromIndex,
+  resolvePath,
+} from './config.js';
 import { executeProviderPayment, initializeProviders } from './providers.js';
 import { loadBeneficiaryRegistry, findBeneficiary } from './registry.js';
 import { auditLogger, certificateMonitor, anomalyDetector } from './security.js';
+// A58 fix: every object logged on the payment path goes through sanitizeForLogging,
+// which now recurses into nested objects and arrays. This module is where beneficiary
+// phone numbers are resolved from the registry, so it is where the guard belongs.
+import { sanitizeForLogging } from './crypto.js';
 
 const MOBILE_MONEY_ARTIFACT_PATH = '../artifacts/contracts/MobileMoneyProvider.sol/MobileMoneyProvider.json';
 const WASDI_ARTIFACT_PATH = '../artifacts/contracts/WASDIOracleConnector.sol/WASDIOracleConnector.json';
@@ -18,6 +29,11 @@ export class RelayerService {
   constructor() {
     this.config = getConfig();
     this.pendingPayments = new Set();
+    // A8-09 fix: orders this process has seen and believes are still PENDING, so the
+    // expiry sweep has something to iterate. Entries are dropped as soon as the chain
+    // reports any other status.
+    this.trackedPayments = new Set();
+    this.paymentTimeout = 1800n; // seconds; refreshed from the contract on connect
     this.beneficiaryRegistry = {};
   }
 
@@ -52,6 +68,13 @@ export class RelayerService {
       // not the whole process lifetime (stats otherwise accumulate forever).
       anomalyDetector.reset();
     }, 60 * 60 * 1000);
+
+    // A8-09 fix: sweep timed-out orders every 5 minutes so their regional daily
+    // allowance is returned instead of staying reserved indefinitely.
+    setInterval(() => {
+      this._sweepStalePayments().catch((error) =>
+        console.error('[relayer] stale payment sweep failed:', error.message || error));
+    }, 5 * 60 * 1000);
   }
 
   async _loadBeneficiaryRegistry() {
@@ -61,6 +84,14 @@ export class RelayerService {
   }
 
   async _connect() {
+    // A70 fix: initialize the audit logger here rather than only inside
+    // initializeProviders(). The CLI commands in index.js (submit-satellite,
+    // submit-batch, confirm-batch) call _connect() directly without going through
+    // start(), so auditLogger.logFile stayed null and every audit write on those paths
+    // was dropped — including the INCIDENT entries an operator needs to reconcile a
+    // failed settlement by hand. _connect() is the one gate every entry point crosses.
+    await auditLogger.initialize();
+
     this.provider = new ethers.JsonRpcProvider(this.config.rpcUrl);
     this.wallet = new ethers.Wallet(this.config.privateKey, this.provider);
 
@@ -80,8 +111,25 @@ export class RelayerService {
       );
     }
 
-    console.log('[relayer] connected to network', await this.provider.getNetwork());
+    const network = await this.provider.getNetwork();
+    // A8-05 fix: both guards run before a single event can be processed. The first
+    // rejects the old silent default (no credentials, no explicit flag); the second
+    // refuses simulation anywhere but a local chain, since simulated payments are
+    // confirmed on-chain exactly as if they had been executed.
+    assertPaymentModeConfigured(this.config);
+    assertSimulationAllowed(network.chainId, this.config.simulatePayments);
+
+    // A8-09 fix: read the contract's own timeout rather than assuming the default, so the
+    // sweep stays aligned if an operator changes it with setTimeout().
+    try {
+      this.paymentTimeout = await this.mobileMoneyContract.paymentTimeout();
+    } catch {
+      console.warn('[relayer] could not read paymentTimeout, keeping default', this.paymentTimeout.toString());
+    }
+
+    console.log('[relayer] connected to network', network);
     console.log('[relayer] wallet address', this.wallet.address);
+    console.log(`[relayer] payment mode: ${this.config.simulatePayments ? 'SIMULATION' : 'LIVE'}`);
   }
 
   async _subscribeToEvents() {
@@ -108,7 +156,8 @@ export class RelayerService {
   }
 
   async _handlePaymentInitiated(paymentId, beneficiaryHash, amount, region, provider, event) {
-    await this._processPayment('PaymentInitiated', paymentId, beneficiaryHash, amount, region, provider);
+    // A71 fix: retryCount 0 — a first attempt. It feeds the provider idempotency key.
+    await this._processPayment('PaymentInitiated', paymentId, beneficiaryHash, amount, region, provider, 0);
   }
 
   // A42 fix: PaymentRetried only carries (paymentId, retryCount) — resolve the full
@@ -123,7 +172,11 @@ export class RelayerService {
         payment.beneficiaryHash,
         payment.amount,
         payment.region,
-        payment.provider
+        payment.provider,
+        // A71 fix: carry retryCount through so the provider idempotency key changes
+        // between attempts. Prefer the on-chain value over the event argument — the
+        // contract is authoritative if an event was replayed.
+        Number(payment.retryCount ?? retryCount)
       );
     } catch (error) {
       console.error('[relayer] failed to resolve retried payment', id, error.message || error);
@@ -134,7 +187,7 @@ export class RelayerService {
     }
   }
 
-  async _processPayment(source, paymentId, beneficiaryHash, amount, region, provider) {
+  async _processPayment(source, paymentId, beneficiaryHash, amount, region, provider, retryCount = 0) {
     const id = paymentId.toString();
     if (this.pendingPayments.has(id)) {
       console.log('[relayer] duplicate payment event ignored', id);
@@ -142,14 +195,28 @@ export class RelayerService {
     }
     this.pendingPayments.add(id);
 
+    // A8-06 fix: the in-memory set above only dedupes within one process lifetime, and it
+    // is cleared as soon as a payment settles. A PaymentInitiated event redelivered after
+    // a websocket reconnect, a chain reorg or a restart therefore reached the provider a
+    // second time. The chain is the only durable record of what has already been settled,
+    // so consult it before spending money. Provider-side idempotency keys are a second
+    // line of defence, not a first: they depend on the provider honouring them and do
+    // nothing at all in simulation mode.
+    if (!(await this._isStillPending(id))) {
+      this.pendingPayments.delete(id);
+      this.trackedPayments.delete(id);
+      return;
+    }
+    this.trackedPayments.add(id);   // A8-09 fix: eligible for the expiry sweep
+
     const providerName = providerNameFromIndex(provider);
-    console.log(`[relayer] ${source}:`, {
+    console.log(`[relayer] ${source}:`, sanitizeForLogging({
       paymentId: id,
       beneficiaryHash: beneficiaryHash.toString(),
       amount: amount.toString(),
       region,
       provider: providerName,
-    });
+    }));
 
     const beneficiary = findBeneficiary(this.beneficiaryRegistry, beneficiaryHash.toString());
     if (!beneficiary) {
@@ -168,15 +235,21 @@ export class RelayerService {
       region,
       provider: providerName,
       externalReference: beneficiary.externalReference,
+      // A71 fix: the adapters build their idempotency key from paymentId + retryCount.
+      // retryPayment() reuses the same paymentId by design, so a key made of paymentId
+      // alone made a deliberate retry byte-identical to the attempt that just failed —
+      // an idempotent endpoint would replay its cached response and the retry would
+      // never actually execute.
+      retryCount,
     };
 
     const result = await executeProviderPayment(providerName, request);
 
     if (result.success) {
-      console.log('[relayer] payment executed successfully, confirming on-chain', {
+      console.log('[relayer] payment executed successfully, confirming on-chain', sanitizeForLogging({
         paymentId: id,
         transactionRef: result.transactionRef,
-      });
+      }));
       await this._sendConfirm(id, result.transactionRef);
     } else {
       console.warn('[relayer] payment execution failed:', result.reason);
@@ -184,6 +257,98 @@ export class RelayerService {
     }
 
     this.pendingPayments.delete(id);
+    // A8-09 fix: settled either way, so it leaves the expiry sweep. A settlement tx that
+    // could not be sent has already raised a durable INCIDENT (A41); the sweep would not
+    // help there, since the order needs manual reconciliation rather than expiry.
+    this.trackedPayments.delete(id);
+  }
+
+  /**
+   * A8-06 fix: is this payment still awaiting execution on-chain?
+   *
+   * PaymentStatus: 0 PENDING, 1 CONFIRMED, 2 FAILED, 3 EXPIRED, 4 CANCELLED. Only a
+   * PENDING order may be executed; anything else means another process, another run, or
+   * an expiry already settled it.
+   *
+   * A read failure returns false — declining to pay on incomplete information is the
+   * conservative side of this decision, and the payment stays PENDING for the next event.
+   *
+   * @param {string} paymentId On-chain payment identifier
+   * @returns {Promise<boolean>} true when the order is still PENDING
+   */
+  async _isStillPending(paymentId) {
+    try {
+      const status = await this.mobileMoneyContract.getPaymentStatus(paymentId);
+      if (Number(status) === 0) return true;
+      console.warn(`[relayer] payment ${paymentId} is no longer PENDING (status ${status}) — skipping execution`);
+      await auditLogger.logSecurityEvent(
+        'DUPLICATE_EXECUTION_PREVENTED', 'WARNING',
+        'Payment event received for an order that is no longer PENDING',
+        { paymentId, status: status.toString() }
+      );
+      return false;
+    } catch (error) {
+      console.error('[relayer] could not read payment status, refusing to execute', paymentId, error.message || error);
+      await auditLogger.logIncident(
+        'STATUS_READ_FAILED',
+        'Could not read on-chain payment status before execution — payment skipped',
+        { paymentId, error: error.message || String(error) }
+      );
+      return false;
+    }
+  }
+
+  /**
+   * A8-09 fix: move timed-out orders to EXPIRED so their regional daily allowance is
+   * released.
+   *
+   * expireStalePayments() existed and refunded regionDailySpend correctly, but nothing
+   * ever called it — even though BLOCKCHAIN_ARCHITECTURE_DESIGN.md documents the relayer
+   * as the caller. Settlement went through confirmPayment(), which rejects an expired
+   * payment rather than transitioning it, so a stale order kept its share of the daily
+   * ceiling forever. With the ceiling now set to the region's own budget at deployment,
+   * every incident permanently shrank that region's capacity to pay.
+   *
+   * @param {string[]} paymentIds Candidate orders, capped at the contract's MAX_BATCH_SIZE
+   */
+  async expireStalePayments(paymentIds) {
+    if (!paymentIds.length) return;
+    const batch = paymentIds.slice(0, 50); // MAX_BATCH_SIZE on MobileMoneyProvider
+    try {
+      const tx = await this.mobileMoneyContract.expireStalePayments(batch);
+      await tx.wait();
+      console.log(`[relayer] expireStalePayments sent for ${batch.length} order(s)`);
+    } catch (error) {
+      console.error('[relayer] expireStalePayments failed:', error.message || error);
+      await auditLogger.logIncident(
+        'EXPIRY_SWEEP_FAILED',
+        'Could not expire stale payments — regional daily allowance stays reserved',
+        { count: batch.length, error: error.message || String(error) }
+      );
+    }
+  }
+
+  /**
+   * A8-09 fix: periodic sweep over the orders this process has seen, expiring those the
+   * contract now considers timed out. Bounded by the tracked set, so it costs nothing
+   * when the relayer is idle.
+   */
+  async _sweepStalePayments() {
+    const candidates = [];
+    for (const id of this.trackedPayments) {
+      try {
+        const payment = await this.mobileMoneyContract.getPayment(id);
+        if (Number(payment.status) !== 0) {
+          this.trackedPayments.delete(id);   // settled elsewhere, stop tracking
+          continue;
+        }
+        const deadline = payment.initiatedAt + this.paymentTimeout;
+        if (BigInt(Math.floor(Date.now() / 1000)) > deadline) candidates.push(id);
+      } catch {
+        this.trackedPayments.delete(id);
+      }
+    }
+    if (candidates.length) await this.expireStalePayments(candidates);
   }
 
   async _handleHighRiskDetected(region, riskScore, timestamp, event) {
@@ -217,7 +382,11 @@ export class RelayerService {
     throw new Error(`Invalid provider value: ${provider}`);
   }
 
-  async submitBatchPayments(batch) {
+  // ARCH-01: MobileMoneyProvider verifies each item against the FloodPrediction ledger
+  // for `eventId`. On a bound deployment a batch without a matching eventId is rejected
+  // on-chain (UnbackedPayment) — which is the point: the relayer can no longer create
+  // payment orders that no trigger backs.
+  async submitBatchPayments(batch, eventId = '') {
     if (!Array.isArray(batch) || batch.length === 0) {
       throw new Error('Batch payload must be a non-empty array');
     }
@@ -249,7 +418,8 @@ export class RelayerService {
       amounts,
       phoneHashes,
       region,
-      providers
+      providers,
+      eventId
     );
     const receipt = await tx.wait();
 

@@ -58,6 +58,7 @@ contract MockMobileMoneyProvider is IMobileMoneyProvider {
 
     /// @notice Track batch calls for test assertions
     uint256 public batchCallCount;
+    string public lastEventId;
     uint256 public lastBatchSize;
 
     // ============================
@@ -188,9 +189,11 @@ contract MockMobileMoneyProvider is IMobileMoneyProvider {
         uint256[] calldata amounts,
         bytes32[] calldata phoneHashes,
         string calldata region,
-        MobileProvider[] calldata providers
+        MobileProvider[] calldata providers,
+        string calldata eventId
     ) external override returns (bytes32[] memory paymentIds) {
         if (forceRevert) revert MockForceRevert();
+        lastEventId = eventId;
 
         uint256 count = beneficiaryHashes.length;
         paymentIds = new bytes32[](count);

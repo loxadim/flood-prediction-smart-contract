@@ -91,7 +91,7 @@ describe("Batch Beneficiaries — 2000 Scale Tests", function () {
         );
 
         await floodPrediction.grantRole(OPERATOR_ROLE, operator.address);
-        await floodPrediction.allocateBudget("SN-TH", ethers.parseEther("500000000"));
+        await floodPrediction.allocateBudget("SN-TH", 100_000_000n);
 
         await mobileMoney.addRelayer(await floodPrediction.getAddress());
 
@@ -227,7 +227,7 @@ describe("Batch Beneficiaries — 2000 Scale Tests", function () {
             let totalPaid = 0;
 
             for (let r = 0; r < regions.length; r++) {
-                await floodPrediction.allocateBudget(regions[r], ethers.parseEther("500000000"));
+                await floodPrediction.allocateBudget(regions[r], 100_000_000n);
                 await jokalante.updateMerkleRoot(regions[r], merkleRoot, TOTAL_BENEFICIARIES);
 
                 await floodPrediction.connect(operator).createFloodTrigger(
@@ -318,10 +318,11 @@ describe("Batch Beneficiaries — 2000 Scale Tests", function () {
             console.log(`       Max gas/batch:      ${maxGas.toLocaleString()}`);
             console.log(`       Total gas:          ${gasUsages.reduce((a, b) => a + b, 0).toLocaleString()}`);
             console.log(`       Avg gas/beneficiary: ${Math.round(avgGas / BATCH_SIZE).toLocaleString()}`);
-            console.log(`       Est. cost @ 50gwei: $${((gasUsages.reduce((a, b) => a + b, 0) * 50e-9 * 0.5) / 1e0).toFixed(4)}\n`);
+            console.log(`       Coût @ 50 gwei: ${(gasUsages.reduce((a, b) => a + b, 0) * 50e-9).toFixed(4)} POL\n`);
 
-            // Every batch must fit within Polygon block gas limit (30M)
-            expect(maxGas).to.be.lt(30_000_000);
+            // ARCH-04 : plafond homogène avec les tests 5000/10000 — 24M laisse ~20 %
+            // de marge sous la limite réelle de 30M de Polygon PoS.
+            expect(maxGas).to.be.lt(24_000_000);
             // Gas should be relatively stable across batches
             expect(maxGas - minGas).to.be.lt(avgGas * 0.5);
         });

@@ -99,7 +99,7 @@ describe("Batch Beneficiaries — 3000 Scale Tests", function () {
         );
 
         await floodPrediction.grantRole(OPERATOR_ROLE, operator.address);
-        await floodPrediction.allocateBudget("SN-TH", ethers.parseEther("500000000"));
+        await floodPrediction.allocateBudget("SN-TH", 100_000_000n);
         await mobileMoney.addRelayer(await floodPrediction.getAddress());
         console.log("  ✅ All contracts deployed and configured");
 
@@ -255,7 +255,7 @@ describe("Batch Beneficiaries — 3000 Scale Tests", function () {
             let totalPaid = 0;
 
             for (let r = 0; r < regions.length; r++) {
-                await floodPrediction.allocateBudget(regions[r], ethers.parseEther("500000000"));
+                await floodPrediction.allocateBudget(regions[r], 100_000_000n);
                 await jokalante.updateMerkleRoot(regions[r], merkleRoot, TOTAL_BENEFICIARIES);
                 await floodPrediction.connect(operator).createFloodTrigger(
                     regions[r], 85, merkleRoot, perRegion * AMOUNT_PER_BEN, perRegion
@@ -329,7 +329,9 @@ describe("Batch Beneficiaries — 3000 Scale Tests", function () {
             const maxGas = Math.max(...gasUsages);
             const minGas = Math.min(...gasUsages);
             const totalGas = gasUsages.reduce((a, b) => a + b, 0);
-            const costUSD = (totalGas * 50e-9 * 0.5).toFixed(4);
+            // Coût exprimé en POL uniquement : un prix fiat codé en dur vieillit mal et
+            // donnerait une fausse précision. Appliquer le cours du jour au besoin.
+            const costPOL = (totalGas * 50e-9).toFixed(4);
 
             console.log(`\n    📊 Gas Analysis — 3000 Beneficiaries (60 batches of 50):`);
             console.log(`       Average gas/batch:   ${Math.round(avgGas).toLocaleString()}`);
@@ -337,10 +339,11 @@ describe("Batch Beneficiaries — 3000 Scale Tests", function () {
             console.log(`       Max gas/batch:       ${maxGas.toLocaleString()}`);
             console.log(`       Total gas:           ${totalGas.toLocaleString()}`);
             console.log(`       Avg gas/beneficiary: ${Math.round(avgGas / BATCH_SIZE).toLocaleString()}`);
-            console.log(`       Est. cost @ 50gwei:  $${costUSD} (MATIC price ~$0.50)\n`);
+            console.log(`       Coût @ 50 gwei:      ${costPOL} POL\n`);
 
-            // Every batch must fit within Polygon block gas limit (30M)
-            expect(maxGas).to.be.lt(30_000_000);
+            // ARCH-04 : plafond homogène avec les tests 5000/10000 — 24M laisse ~20 %
+            // de marge sous la limite réelle de 30M de Polygon PoS.
+            expect(maxGas).to.be.lt(24_000_000);
             // Gas variance should be less than 50% of average
             expect(maxGas - minGas).to.be.lt(avgGas * 0.5);
         });

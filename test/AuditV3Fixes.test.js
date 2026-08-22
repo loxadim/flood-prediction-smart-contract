@@ -45,7 +45,7 @@ describe("Audit Round 3 — Regression", function () {
             const phones = [hash("p1"), hash("p2")];
             const providers = [0, 1]; // ORANGE_MONEY, WAVE
 
-            await expect(mmp.connect(relayer).batchInitiatePayments(hashes, amounts, phones, REGION, providers))
+            await expect(mmp.connect(relayer).batchInitiatePayments(hashes, amounts, phones, REGION, providers, ""))
                 .to.emit(mmp, "PaymentInitiated");
 
             // Both per-item events must be present (relayer settles each individually).

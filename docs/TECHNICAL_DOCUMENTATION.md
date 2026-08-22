@@ -76,7 +76,7 @@ OPAL (Open Platform for African Livelihoods) est une plateforme blockchain de la
 | Contrats mock | 3 |
 | Interfaces | 7 |
 | Bibliotheque utilitaire | 1 |
-| Tests automatises | 512 |
+| Tests automatises | 577 |
 | Fichiers de test | 17 |
 | Scripts de deploiement | 7 |
 | Correctifs de securite integres | 35+ |
@@ -1955,7 +1955,7 @@ npx hardhat build
 ### 25.4 Tests
 
 ```bash
-# Suite complete (512 tests)
+# Suite complete (577 tests)
 npx hardhat test
 
 # Fichier specifique
@@ -2023,7 +2023,7 @@ npx hardhat run scripts/deploy-upgradeable.js --network polygon
 ```
 
 **Checklist production** :
-- [ ] Tous les 512 tests passent
+- [ ] Tous les 577 tests passent
 - [ ] Deploiement testnet reussi
 - [ ] Tests manuels E2E sur testnet
 - [ ] Audit de securite passe
@@ -2147,7 +2147,10 @@ const envOrVar = (name) => process.env[name] ? process.env[name] : configVariabl
 | Commande | Description |
 |----------|-------------|
 | `npm run build` | Compile tous les contrats |
-| `npm test` | Execute la suite de tests complete (512 tests) |
+| `npm test` | Execute la suite de tests complete (577 tests) |
+| `npm run demo` | Deroule un scenario d'inondation complet (satellite -> paiement confirme) sur reseau local |
+| `npm run accept-ownership` | Finalise le transfert des 5 contrats immuables a la gouvernance (ARCH-02, second temps Ownable2Step) |
+| `npm run size` | Verifie les tailles de bytecode contre la limite EIP-170 |
 | `npm run deploy:local` | Deploie sur localhost |
 | `npm run deploy:amoy` | Deploie sur Polygon Amoy |
 | `npm run deploy:sepolia` | Deploie sur Sepolia |
@@ -2175,6 +2178,8 @@ const envOrVar = (name) => process.env[name] ? process.env[name] : configVariabl
 | `AuditFixValidation.test.js` | Validation des correctifs d'audit initiaux | 17 |
 | `SecurityFixes.test.js` | Verification de tous les correctifs de securite | 17 |
 | `AuditV3Fixes.test.js` | Correctifs audit round 3 (full-project) | 14 |
+| `AuditV6Fixes.test.js` | Correctifs audit round 6 (full-project + relayer) | 32 |
+| `AuditV5Fixes.test.js` | Correctifs audit round 5 (full-project + relayer) | 23 |
 | `AuditV4Fixes.test.js` | Correctifs audit round 4 (full-project + relayer) | 11 |
 | `BatchBeneficiaries10000.test.js` | Stress test 10000 beneficiaires | 9 |
 | `BatchBeneficiaries5000.test.js` | Stress test 5000 beneficiaires | 9 |
@@ -2183,7 +2188,7 @@ const envOrVar = (name) => process.env[name] ? process.env[name] : configVariabl
 | `BatchBeneficiaries3000.test.js` | Stress test 3000 beneficiaires | 8 |
 | `BatchBeneficiaries1000.test.js` | Stress test 1000 beneficiaires | 7 |
 
-**Total : 512 tests (18 fichiers)**
+**Total : 577 tests (21 fichiers)**
 
 ### 28.2 Couverture par categorie
 
@@ -2666,4 +2671,4 @@ flood-prediction-smart-contract/
 
 *Documentation Technique v4.1.0 — OPAL Platform — DPA Foundation — Juillet 2026*
 
-*512 tests automatises — 60+ correctifs de securite integres — 7 contrats principaux*
+*577 tests automatises — 60+ correctifs de securite integres — 7 contrats principaux*

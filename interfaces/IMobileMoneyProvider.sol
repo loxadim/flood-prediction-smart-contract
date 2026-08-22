@@ -58,12 +58,17 @@ interface IMobileMoneyProvider {
     function retryPayment(bytes32 paymentId) external;
 
     // Batch operations
+    /// @param eventId ARCH-01 fix: the FloodPredictionContract trigger this batch settles.
+    ///        When the provider is bound to a ledger (setFloodPredictionContract), every
+    ///        item is verified against that trigger's on-chain PaymentRecord before an
+    ///        order is created. Pass "" only on an unbound (legacy//test) deployment.
     function batchInitiatePayments(
         bytes32[] calldata beneficiaryHashes,
         uint256[] calldata amounts,
         bytes32[] calldata phoneHashes,
         string calldata region,
-        MobileProvider[] calldata providers
+        MobileProvider[] calldata providers,
+        string calldata eventId
     ) external returns (bytes32[] memory paymentIds);
 
     function batchConfirmPayments(

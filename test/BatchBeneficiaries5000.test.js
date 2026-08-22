@@ -110,6 +110,11 @@ describe("Batch Beneficiaries — 5000 Scale Tests", function () {
 
         await floodPrediction.grantRole(OPERATOR_ROLE, operator.address);
         await mobileMoney.addRelayer(await floodPrediction.getAddress());
+        // R7-02 : mesurer la configuration de PRODUCTION. Sans cette liaison le test
+        // chiffrait un chemin que le déploiement n'utilise pas — la vérification
+        // ARCH-01 coûte ~5 900 gas par bénéficiaire, et l'assertion de 24M doit la
+        // comptabiliser sous peine de garantir la mauvaise chose.
+        await mobileMoney.setFloodPredictionContract(await floodPrediction.getAddress());
         console.log("  ✅ All contracts deployed and configured\n");
 
         // ── Generate 5000 beneficiaries ─────────────────────────────────
@@ -179,7 +184,7 @@ describe("Batch Beneficiaries — 5000 Scale Tests", function () {
         before(async function () {
             // Allocate budget and create a single trigger for all 5000 beneficiaries
             console.log("  [3/3] Creating trigger for 5000 beneficiaries...");
-            await floodPrediction.allocateBudget(INTERNAL_REGION, ethers.parseEther("500000000"));
+            await floodPrediction.allocateBudget(INTERNAL_REGION, 100_000_000n);
 
             const tx = await floodPrediction.connect(operator).createFloodTrigger(
                 INTERNAL_REGION, 85, merkleRoot, TOTAL_AMOUNT, TOTAL_BENEFICIARIES
@@ -199,6 +204,7 @@ describe("Batch Beneficiaries — 5000 Scale Tests", function () {
             const startTime = Date.now();
             let totalPaid = 0;
             let totalGasUsed = 0n;
+            let maxBatchGas = 0n;
 
             for (let batch = 0; batch < TOTAL_BATCHES; batch++) {
                 const hashes = [];
@@ -222,6 +228,7 @@ describe("Batch Beneficiaries — 5000 Scale Tests", function () {
                 );
                 const receipt = await batchTx.wait();
                 totalGasUsed += receipt.gasUsed;
+                if (receipt.gasUsed > maxBatchGas) maxBatchGas = receipt.gasUsed;
                 totalPaid += BATCH_SIZE;
 
                 // Progress every 25 batches (1250 beneficiaries)
@@ -242,6 +249,15 @@ describe("Batch Beneficiaries — 5000 Scale Tests", function () {
             console.log(`  Total batches processed:       ${TOTAL_BATCHES}`);
             console.log(`  Total gas used:                ${totalGasUsed.toLocaleString()}`);
             console.log(`  Avg gas per batch (50):        ${avgGasPerBatch.toLocaleString()}`);
+            console.log(`  Max gas in a single batch:     ${maxBatchGas.toLocaleString()}`);
+
+            // ARCH-04 : même garde-fou que le test à 10 000. Un lot de 50 doit tenir dans
+            // un bloc Polygon PoS (30M) avec de la marge — la moyenne seule masquerait un
+            // lot isolé qui déborde.
+            expect(maxBatchGas).to.be.lessThan(
+                24_000_000n,
+                `un lot de 50 consomme ${maxBatchGas} gas — au-delà du plafond de 24M (limite Polygon 30M).`
+            );
             console.log(`  Avg gas per beneficiary:       ${avgGasPerBeneficiary.toLocaleString()}`);
             console.log(`  Total duration:                ${totalDuration}s`);
             console.log(`  Throughput:                    ${throughput} beneficiaries/sec`);
@@ -279,7 +295,7 @@ describe("Batch Beneficiaries — 5000 Scale Tests", function () {
 
         it("should have deducted the full payment amount from the budget", async function () {
             const remaining = await floodPrediction.getRegionBudgetRemaining(INTERNAL_REGION);
-            const initial = ethers.parseEther("500000000");
+            const initial = 100_000_000n;
             expect(remaining).to.be.lt(initial);
             console.log(`     ✅ Budget correctly deducted (remaining: ${remaining})`);
         });
@@ -292,7 +308,7 @@ describe("Batch Beneficiaries — 5000 Scale Tests", function () {
         it("should prevent double-payment for any previously paid beneficiary", async function () {
             // Use a fresh trigger to test duplicate detection
             const freshRegion = "FLOOD-ZONE-DUP";
-            await floodPrediction.allocateBudget(freshRegion, ethers.parseEther("500000000"));
+            await floodPrediction.allocateBudget(freshRegion, 100_000_000n);
             await jokalante.updateMerkleRoot(freshRegion, merkleRoot, TOTAL_BENEFICIARIES);
             await floodPrediction.connect(operator).createFloodTrigger(
                 freshRegion, 85, merkleRoot, TOTAL_AMOUNT, TOTAL_BENEFICIARIES
