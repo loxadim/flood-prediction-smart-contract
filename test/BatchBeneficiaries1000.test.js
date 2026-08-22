@@ -22,6 +22,13 @@ describe("Batch Beneficiaries — Scale Tests", function () {
     let floodPrediction, multiOracle, jokalante, mobileMoney, opalGov;
     let admin, operator, upgrader, pauser;
     let beneficiaries, leaves, tree, merkleRoot;
+    // A8-13 fix: KYC compliance and the ARCH-01 ledger binding were both absent from this
+    // file, so every gas figure it produced described a configuration nobody deploys.
+    // batchCheckCompliance() and the per-item getPaymentRecord() callback together add
+    // roughly 16 % to the cost of a batch. The contract is deployed once and reused: the
+    // beneficiary hashes are deterministic, so attestations approved here survive each
+    // redeployment of the hub, and per-test isolation is untouched.
+    let kyc, kycAddress;
 
     const OPERATOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("OPERATOR_ROLE"));
 
@@ -58,6 +65,33 @@ describe("Batch Beneficiaries — Scale Tests", function () {
         return { tree: treeObj, leaves: leavesArr, root: treeObj.getHexRoot() };
     }
 
+    // A8-13 fix: one KYC deployment, one approval pass, reused by every test below.
+    before(async function () {
+        this.timeout(300000);
+        const signers = await ethers.getSigners();
+        const [officerA, officerB] = [signers[4], signers[5]];
+
+        const KYC = await ethers.getContractFactory("KYCAMLCompliance");
+        kyc = await KYC.deploy();
+        await kyc.waitForDeployment();
+        kycAddress = await kyc.getAddress();
+
+        // Two officers: approveAttestation enforces the four-eyes rule, so the approver
+        // must differ from the submitter (H-04).
+        await kyc.addComplianceOfficer(officerA.address);
+        await kyc.addComplianceOfficer(officerB.address);
+
+        for (const b of generateBeneficiaries(1000)) {
+            await kyc.connect(officerA).submitAttestation(
+                b.hash,
+                ethers.keccak256(ethers.toUtf8Bytes("identity" + b.hash)),
+                ethers.keccak256(ethers.toUtf8Bytes("documents")),
+                "SN-TH"
+            );
+            await kyc.connect(officerB).approveAttestation(b.hash, 0, 0);
+        }
+    });
+
     beforeEach(async function () {
         [admin, operator, upgrader, pauser] = await ethers.getSigners();
 
@@ -81,12 +115,14 @@ describe("Batch Beneficiaries — Scale Tests", function () {
         floodPrediction = await ozUpgrades.deployProxy(FloodPred, [admin.address, operator.address, upgrader.address, pauser.address], { kind: "uups" });
         await floodPrediction.waitForDeployment();
 
+        // A8-13 fix: the KYC module is wired in, so batchCheckCompliance() runs on every
+        // batch exactly as it does in production.
         await floodPrediction.setContractAddresses(
             await multiOracle.getAddress(),
             await opalGov.getAddress(),
             await jokalante.getAddress(),
             await mobileMoney.getAddress(),
-            ethers.ZeroAddress
+            kycAddress
         );
 
         await floodPrediction.grantRole(OPERATOR_ROLE, operator.address);
@@ -94,6 +130,14 @@ describe("Batch Beneficiaries — Scale Tests", function () {
 
         // Register FloodPrediction as relayer on MobileMoneyProvider
         await mobileMoney.addRelayer(await floodPrediction.getAddress());
+        // A8-13 fix: bind the payment rail to the ledger (ARCH-01). Each item in a batch
+        // then costs an extra getPaymentRecord() callback into the hub — a real cost the
+        // deployment scripts always incur and this file used to omit.
+        await mobileMoney.setFloodPredictionContract(await floodPrediction.getAddress());
+        // Daily ceiling set to the region's allocation, as deploy-amoy.js does.
+        await mobileMoney.setDailyLimit("SN-TH", 100_000_000n);
+        // Authorize the freshly deployed hub to read compliance from the shared registry.
+        await kyc.authorizeContract(await floodPrediction.getAddress());
 
         // Generate 1000 beneficiaries with correct leaf format
         beneficiaries = generateBeneficiaries(1000);
