@@ -143,8 +143,14 @@ jobs:
           target: 'contracts/'
           solc-version: 0.8.28
           fail-on: high
+          # --solc-args mirrors hardhat.config.js. Without viaIR and the optimizer,
+          # OpalGovernanceUpgradeable fails to compile at all with "Stack too deep" —
+          # the project only builds under those settings. They affect code generation,
+          # not the AST Slither analyses, so matching them changes nothing about the
+          # findings and everything about whether there are any.
           slither-args: >-
             --solc-remaps @openzeppelin=node_modules/@openzeppelin
+            --solc-args "--optimize --optimize-runs 200 --via-ir"
             --filter-paths "contracts/mocks|node_modules"
             --exclude-dependencies
           sarif: results.sarif
