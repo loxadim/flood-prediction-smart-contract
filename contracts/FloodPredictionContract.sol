@@ -652,14 +652,6 @@ contract FloodPredictionContract is
                 verified: true
             });
 
-            // A34 fix (doc): record the payout in JokalanteTargeting for off-chain visibility
-            // and statistics only. Double-payment prevention is enforced by paymentRecords
-            // (per eventId) above — _verified is NOT consulted by any on-chain check, so a
-            // beneficiary legitimately remains payable across distinct flood events.
-            if (jokalanteTargeting != address(0)) {
-                IJokalanteTargeting(jokalanteTargeting).markVerified(trigger.region, beneficiaryHashes[i]);
-            }
-
             emit SinglePaymentProcessed(eventId, beneficiaryHashes[i], amounts[i], block.timestamp);
         }
 
@@ -728,6 +720,25 @@ contract FloodPredictionContract is
                 filteredPhones[fIdx]  = phoneHashes[i];
                 filteredProviders[fIdx] = providers[i];
                 fIdx++;
+
+                // A34 fix (doc): record the payout in JokalanteTargeting for off-chain
+                // visibility and statistics only. Double-payment prevention is enforced by
+                // paymentRecords (per eventId), so _verified is NOT consulted by any
+                // on-chain check and a beneficiary legitimately remains payable across
+                // distinct flood events.
+                //
+                // A8-15 fix: this call used to sit inside the payment loop, before
+                // budget.spentAmount, trigger.status and the batch counters were written.
+                // That is an external call made while this contract's own state is
+                // half-updated — checks-effects-interactions in reverse. Nothing exploits
+                // it today: both entry points are nonReentrant, every cross-function
+                // target is role-gated, and the targeting module belongs to governance. But
+                // the safety rested entirely on that contract behaving, for a call the
+                // comment above describes as bookkeeping. Moved here, after every state
+                // write, it costs nothing and depends on nobody.
+                if (jokalanteTargeting != address(0)) {
+                    IJokalanteTargeting(jokalanteTargeting).markVerified(trigger.region, beneficiaryHashes[i]);
+                }
             }
         }
         uint256 gasBeforeDispatch = gasleft();
@@ -832,6 +843,16 @@ contract FloodPredictionContract is
             totalBatch += amounts[i];
         }
 
+        // A8-15 fix: mark the payments dispatched BEFORE calling out, not after.
+        // Unlike the primary path there is no try/catch here — a failed dispatch reverts
+        // the whole transaction and takes these writes with it — so setting the flags
+        // first is exactly equivalent on every outcome, and leaves no window in which the
+        // provider holds control while this contract still reports the payment as
+        // undispatched. Checks, effects, then interactions.
+        for (uint256 i = 0; i < count; i++) {
+            mobileMoneyDispatched[keccak256(abi.encode(eventId, beneficiaryHashes[i]))] = true;
+        }
+
         IMobileMoneyProvider(mobileMoneyProvider).batchInitiatePayments(
             beneficiaryHashes,
             amounts,
@@ -840,10 +861,6 @@ contract FloodPredictionContract is
             providers,
             eventId
         );
-
-        for (uint256 i = 0; i < count; i++) {
-            mobileMoneyDispatched[keccak256(abi.encode(eventId, beneficiaryHashes[i]))] = true;
-        }
 
         emit MobileMoneyDispatchRetried(eventId, count, totalBatch);
     }

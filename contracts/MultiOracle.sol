@@ -833,6 +833,17 @@ contract MultiOracle is IMultiOracle, Ownable2Step, ReentrancyGuard, Pausable {
      *      contract can then update critical parameters.
      * @param newGovernance The address of the governance contract (or zero to remove).
      */
+    // A8-15 note: Slither reports a missing zero-address check here. It is a false
+    // positive — address(0) is the documented way to remove governance (see @param), and
+    // rejecting it would delete that capability.
+    //
+    // A code-length check was tried and reverted. It looked like the consistent thing to
+    // do, since setContractAddresses and setAllowedTarget both require code. But this
+    // setter is not those: governance here is whoever may call the onlyOwnerOrGovernance
+    // parameter setters, and an EOA is a legitimate answer — during a pilot before the
+    // governance proxy is wired, or as an operator key while it is being replaced. The
+    // test suite exercises exactly that. Tightening the contract to satisfy a linter,
+    // against a capability the tests rely on, is the wrong trade.
     function setGovernance(address newGovernance) external onlyOwner {
         address oldGovernance = governance;
         governance = newGovernance;
