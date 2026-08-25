@@ -57,21 +57,37 @@ export function fetchCertificateExpiry(url, timeoutMs = 8000) {
       return;
     }
 
+    let socket;
     let settled = false;
     const finish = (value) => {
       if (settled) return;
       settled = true;
-      try { socket.destroy(); } catch { /* already closed */ }
+      try { socket?.destroy(); } catch { /* already closed */ }
       resolve(value);
     };
 
-    const socket = tls.connect({ host, port, servername: host }, () => {
-      const cert = socket.getPeerCertificate();
-      finish(cert && cert.valid_to ? cert.valid_to : null);
-    });
+    // RFC 6066 forbids an IP literal as the TLS ServerName, and Node rejects it
+    // outright rather than ignoring it. Passing one threw synchronously out of
+    // tls.connect — inside a Promise executor, so it surfaced as a rejection from a
+    // function whose whole contract is to resolve null when it cannot read a
+    // certificate. The six-hourly monitoring interval in service.js awaits this with
+    // no catch, so the throw would have become an unhandled rejection in the running
+    // relayer, not just a failing test.
+    const isIpLiteral = /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(':');
+    const options = isIpLiteral ? { host, port } : { host, port, servername: host };
 
-    socket.setTimeout(timeoutMs, () => finish(null));
-    socket.on('error', () => finish(null));
+    // A monitoring probe must never be able to throw at its caller: an unreachable
+    // endpoint, a malformed host and a refused handshake all mean the same thing here.
+    try {
+      socket = tls.connect(options, () => {
+        const cert = socket.getPeerCertificate();
+        finish(cert && cert.valid_to ? cert.valid_to : null);
+      });
+      socket.setTimeout(timeoutMs, () => finish(null));
+      socket.on('error', () => finish(null));
+    } catch {
+      finish(null);
+    }
   });
 }
 
