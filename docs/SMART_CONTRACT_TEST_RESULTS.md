@@ -4,7 +4,7 @@
 **Version**: 1.0.0  
 **Framework**: Hardhat 3.x / Mocha / Chai / Ethers.js 6.x  
 **Solidity**: ^0.8.22 (compiled 0.8.28)  
-**Result**: **577 / 577 tests passing (~2m)**
+**Result**: **602 / 602 tests passing (~2m)**
 
 ---
 
@@ -25,12 +25,12 @@
 
 ## 1. Executive Summary
 
-The OPAL Platform smart contract suite achieves **100% test pass rate** across **577 test cases** spread over **21 test files**. Tests cover all 7 production contracts, 1 library, 3 mock contracts, and the off-chain Mobile Money relayer service, validating functional correctness, security properties, access control, edge cases, and batch scalability up to 10,000 beneficiaries.
+The OPAL Platform smart contract suite achieves **100% test pass rate** across **602 test cases** spread over **22 test files**. Tests cover all 7 production contracts, 1 library, 3 mock contracts, and the off-chain Mobile Money relayer service, validating functional correctness, security properties, access control, edge cases, and batch scalability up to 10,000 beneficiaries.
 
 | Metric | Value |
 |--------|-------|
-| Total Tests | 577 |
-| Passing | 577 |
+| Total Tests | 602 |
+| Passing | 602 |
 | Failing | 0 |
 | Pending | 0 |
 | Execution Time | ~2m |
@@ -729,7 +729,7 @@ vérifiée contre le code, chaque correctif testé sur le script qu'il prétenda
 ## Appendix A — Full Test Output Summary
 
 ```
-577 passing (~2m)
+602 passing (~2m)
 
 Test Suites:
   ✅ AuditFixValidation.test.js      — 17 tests
@@ -753,7 +753,7 @@ Test Suites:
   ✅ SecurityFixes.test.js            — 17 tests
   ✅ WASDIOracleConnector.test.js     — 42 tests
   ─────────────────────────────────────────────
-  Total: 577 passing | 0 failing | 0 pending
+  Total: 602 passing | 0 failing | 0 pending
 ```
 
 ---

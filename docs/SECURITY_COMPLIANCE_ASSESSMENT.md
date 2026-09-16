@@ -155,7 +155,7 @@ This prevents accidental ownership transfer to wrong addresses.
 | SC-4 | Access Control | ✅ Mitigated | 4-role RBAC, Ownable2Step, modifier chains |
 | SC-5 | Front-Running | ⚠️ Accepted Risk | Commit-reveal not used; mitigated by RBAC on trigger creation |
 | SC-6 | Denial of Service | ✅ Mitigated | MAX_BATCH_SIZE=50, paginated views (M-02), gas limits |
-| SC-7 | Logic Errors | ✅ Mitigated | 339 passing tests, audit regression suite |
+| SC-7 | Logic Errors | ✅ Mitigated | 602 passing tests, audit regression suite |
 | SC-8 | Uninitialized Storage | ✅ Mitigated | `_disableInitializers()` in constructors |
 | SC-9 | Centralization Risk | ⚠️ Partial | Multi-sig governance; but single admin initially |
 | SC-10 | Oracle Manipulation | ✅ Mitigated | IQR outlier detection, 4+ oracle minimum, reputation |
@@ -534,7 +534,7 @@ Non-emergency proposals require a **1-hour delay** between quorum completion and
 | Timestamp dependency | Block timestamps on Polygon PoS have < 1 second drift; all time-dependent logic uses margins ≥ 10 minutes |
 | Front-running | Trigger creation is RBAC-protected; front-running can only be done by authorized operators |
 | Initial centralization | DPA Foundation operates as trusted deployer; governance contract enables progressive decentralization |
-| No formal verification | 339 tests + audit cycles provide high confidence; formal verification planned for v5.0 |
+| No formal verification | 602 tests + audit cycles provide high confidence; formal verification planned for v5.0 |
 
 ---
 
@@ -543,7 +543,7 @@ Non-emergency proposals require a **1-hour delay** between quorum completion and
 ### 11.1 Completed (Current Version)
 
 - [x] All 28 audit findings remediated
-- [x] 339/339 regression tests passing
+- [x] 602/602 regression tests passing
 - [x] UUPS upgrade safety validated
 - [x] RGPD-compliant on-chain data model
 - [x] KYC/AML integration with auto-suspension
@@ -566,7 +566,7 @@ Non-emergency proposals require a **1-hour delay** between quorum completion and
 
 | Phase | Target | Actions |
 |-------|--------|---------|
-| Phase 1 (Current) | Testnet Deployment | All security measures implemented, 339 tests passing |
+| Phase 1 (Current) | Testnet Deployment | All security measures implemented, 602 tests passing |
 | Phase 2 | Security Audit | External audit engagement (CertiK, Trail of Bits, or equivalent) |
 | Phase 3 | Mainnet Beta | Limited deployment with monitoring, production lock enabled |
 | Phase 4 | Full Production | Multi-sig governance, operator rotation, ongoing monitoring |

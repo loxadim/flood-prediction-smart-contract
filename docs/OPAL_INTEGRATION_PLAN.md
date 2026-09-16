@@ -640,7 +640,7 @@ POLYGONSCAN_API_KEY=...
 
 | Environment | Network | Purpose |
 |-------------|---------|---------|
-| Unit Tests | Hardhat EDR (local) | Contract logic — 577 tests across 21 files |
+| Unit Tests | Hardhat EDR (local) | Contract logic — 602 tests across 22 files |
 | Integration Tests | Hardhat localhost | End-to-end contract interaction |
 | Testnet Tests | Polygon Amoy | Real network conditions, gas costs |
 | Staging | Polygon Amoy + Mock APIs | Full OPAL + blockchain integration |
@@ -706,7 +706,7 @@ gantt
 | Task | Status | Notes |
 |------|--------|-------|
 | Smart contracts deployed to Amoy | ✅ Ready | Resumable deploy script available |
-| 577/577 tests passing | ✅ Complete | Full regression suite (21 files) |
+| 602/602 tests passing | ✅ Complete | Full regression suite (22 files) |
 | Deployment manifest generated | ✅ Ready | deploy-amoy.js produces JSON |
 | OPAL backend blockchain service | Pending | ethers.js v6 integration |
 | Event listener service | Pending | WebSocket to Amoy RPC |

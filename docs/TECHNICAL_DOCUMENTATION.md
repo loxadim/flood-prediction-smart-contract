@@ -76,7 +76,7 @@ OPAL (Open Platform for African Livelihoods) est une plateforme blockchain de la
 | Contrats mock | 3 |
 | Interfaces | 7 |
 | Bibliotheque utilitaire | 1 |
-| Tests automatises | 577 |
+| Tests automatises | 602 |
 | Fichiers de test | 17 |
 | Scripts de deploiement | 7 |
 | Correctifs de securite integres | 35+ |
@@ -1955,7 +1955,7 @@ npx hardhat build
 ### 25.4 Tests
 
 ```bash
-# Suite complete (577 tests)
+# Suite complete (602 tests)
 npx hardhat test
 
 # Fichier specifique
@@ -2023,7 +2023,7 @@ npx hardhat run scripts/deploy-upgradeable.js --network polygon
 ```
 
 **Checklist production** :
-- [ ] Tous les 577 tests passent
+- [ ] Tous les 602 tests passent
 - [ ] Deploiement testnet reussi
 - [ ] Tests manuels E2E sur testnet
 - [ ] Audit de securite passe
@@ -2147,7 +2147,7 @@ const envOrVar = (name) => process.env[name] ? process.env[name] : configVariabl
 | Commande | Description |
 |----------|-------------|
 | `npm run build` | Compile tous les contrats |
-| `npm test` | Execute la suite de tests complete (577 tests) |
+| `npm test` | Execute la suite de tests complete (602 tests) |
 | `npm run demo` | Deroule un scenario d'inondation complet (satellite -> paiement confirme) sur reseau local |
 | `npm run accept-ownership` | Finalise le transfert des 5 contrats immuables a la gouvernance (ARCH-02, second temps Ownable2Step) |
 | `npm run size` | Verifie les tailles de bytecode contre la limite EIP-170 |
@@ -2188,7 +2188,7 @@ const envOrVar = (name) => process.env[name] ? process.env[name] : configVariabl
 | `BatchBeneficiaries3000.test.js` | Stress test 3000 beneficiaires | 8 |
 | `BatchBeneficiaries1000.test.js` | Stress test 1000 beneficiaires | 7 |
 
-**Total : 577 tests (21 fichiers)**
+**Total : 602 tests (22 fichiers)**
 
 ### 28.2 Couverture par categorie
 
@@ -2224,15 +2224,18 @@ Les tests de charge ont ete verifies avec succes jusqu'a 10 000 beneficiaires da
 
 | Nombre de beneficiaires | Batches | Gas total | Gas moyen / batch | Gas moyen / beneficiaire |
 |-------------------------|---------|-----------|-------------------|--------------------------|
-| 2 000 | 40 | 623 044 300 | 15 576 107 | 311 522 |
-| 3 000 | 60 | 936 452 760 | 15 607 546 | 312 151 |
-| 5 000 | 100 | 1 783 937 678 | 17 839 376 | 356 787 |
-| 10 000 | 200 | 3 577 521 684 | 17 887 608 | 357 752 |
+| 1 000 | 20 | 391 431 098 | 19 571 554 | 391 431 |
+| 2 000 | 40 | 784 277 772 | 19 606 944 | 392 139 |
+| 3 000 | 60 | 1 177 975 007 | 19 632 917 | 392 658 |
+| 5 000 | 100 | 2 191 757 345 | 21 917 573 | 438 351 |
+| 10 000 | 200 | 4 391 719 740 | 21 958 598 | 439 171 |
 
 #### Observations clefs
 
 - Le traitement batch de 50 beneficiaires est stable jusqu'a 10 000 beneficiaires.
-- Le cout par beneficiaire reste relativement stable autour de 312k gas jusqu'a 3 000 beneficiaires, puis monte a ~357k gas pour 5 000 et 10 000.
+- Le cout par beneficiaire reste stable autour de 392k gas jusqu'a 3 000 beneficiaires, puis monte a ~439k gas pour 5 000 et 10 000. Le palier vient de la profondeur de l'arbre de Merkle, qui passe de 12 a 13 niveaux : chaque niveau ajoute un hachage par preuve, cinquante fois par lot.
+- **Ces mesures sont prises dans la configuration reellement deployee**, controle KYC (`batchCheckCompliance`) et liaison ARCH-01 au registre (`getPaymentRecord`) compris. Les chiffres anterieurs a l'audit round 8 omettaient ces deux appels et sous-estimaient le cout d'environ 16 %.
+- Le pic par lot atteint 22,2 M de gaz a 10 000 beneficiaires, soit **74 % d'un bloc Polygon de 30 M**. `MAX_BATCH_SIZE` ne peut donc pas etre releve.
 - La prevention de double-paiement fonctionne correctement sur toute l'echelle testee.
 - Le test initiale de role `RolesNotDistinct()` a ete corrige en attribuant 4 signataires distincts lors de l'initialisation de `FloodPredictionContract`.
 
@@ -2671,4 +2674,4 @@ flood-prediction-smart-contract/
 
 *Documentation Technique v4.1.0 — OPAL Platform — DPA Foundation — Juillet 2026*
 
-*577 tests automatises — 60+ correctifs de securite integres — 7 contrats principaux*
+*602 tests automatises — 60+ correctifs de securite integres — 7 contrats principaux*

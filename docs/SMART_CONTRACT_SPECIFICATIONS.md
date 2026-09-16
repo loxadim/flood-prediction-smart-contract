@@ -654,7 +654,7 @@ Test double implementing `IWASDIOracle`, inherits `Ownable2Step`:
 ---
 
 *Total: 8 contracts + 1 library + 7 interfaces + 3 mocks = 19 Solidity files*
-*Verified against codebase — Solidity ^0.8.22, OpenZeppelin ^5.4.0, 339/339 tests passing*
+*Verified against codebase — Solidity ^0.8.22, OpenZeppelin ^5.4.0, 602/602 tests passing*
 
 ---
 

@@ -989,4 +989,4 @@ All contracts use Solidity custom errors (gas-efficient) instead of `require()` 
 
 ---
 
-*Document based on verified codebase analysis — 7 contracts, 1 library, 7 interfaces, 3 mocks, 339/339 tests passing.*
+*Document based on verified codebase analysis — 7 contracts, 1 library, 7 interfaces, 3 mocks, 602/602 tests passing.*
